@@ -181,10 +181,54 @@ export class SingaporeWeatherClient {
   ) {}
 
   async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot> {
-    const forecastPayload = await this.fetchLatestForecastPayload().catch(() => null);
-    return forecastPayload
-      ? this.snapshotFromPayload(forecastPayload, latitude, longitude)
-      : this.emptyForecastSnapshot();
+    const [
+      forecastPayload,
+      airTemp,
+      relativeHumidity,
+      rainfall,
+      windSpeed,
+      windDirection,
+      uvIndex,
+      airQuality,
+      twentyFourHour,
+      fourDay,
+    ] = await Promise.allSettled([
+      this.fetchLatestForecastPayload(),
+      this.fetchNearestReading('air-temperature', latitude, longitude),
+      this.fetchNearestReading('relative-humidity', latitude, longitude),
+      this.fetchNearestReading('rainfall', latitude, longitude),
+      this.fetchNearestReading('wind-speed', latitude, longitude),
+      this.fetchNearestReading('wind-direction', latitude, longitude),
+      this.fetchUvIndex(),
+      this.fetchAirQuality(latitude, longitude),
+      this.fetchTwentyFourHourForecast(latitude, longitude),
+      this.fetchFourDayForecast(),
+    ]);
+
+    const snapshot =
+      forecastPayload.status === 'fulfilled'
+        ? this.snapshotFromPayload(forecastPayload.value, latitude, longitude)
+        : this.emptyForecastSnapshot();
+
+    if (airTemp.status === 'fulfilled') snapshot.temperature_c = airTemp.value.value;
+    if (relativeHumidity.status === 'fulfilled') snapshot.humidity_percent = relativeHumidity.value.value;
+    if (rainfall.status === 'fulfilled') snapshot.rainfall_mm = rainfall.value.value;
+    if (windSpeed.status === 'fulfilled') snapshot.wind_speed_knots = windSpeed.value.value;
+    if (windDirection.status === 'fulfilled') snapshot.wind_direction_degrees = windDirection.value.value;
+    if (uvIndex.status === 'fulfilled') snapshot.uv_index = uvIndex.value.value;
+    if (airQuality.status === 'fulfilled') {
+      snapshot.psi_twenty_four_hourly = airQuality.value.psi;
+      snapshot.pm25_one_hourly = airQuality.value.pm25;
+      snapshot.air_quality_region = airQuality.value.region;
+    }
+    if (twentyFourHour.status === 'fulfilled') {
+      snapshot.forecast_low_c = twentyFourHour.value.low;
+      snapshot.forecast_high_c = twentyFourHour.value.high;
+      snapshot.forecast_periods = twentyFourHour.value.periods;
+    }
+    if (fourDay.status === 'fulfilled') snapshot.daily_forecast = fourDay.value.days;
+
+    return snapshot;
   }
 
   async fetchLatestForecastPayload(): Promise<ForecastPayload> {

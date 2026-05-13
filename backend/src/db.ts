@@ -109,6 +109,10 @@ export async function resetStore(): Promise<void> {
   sqlite.prepare("DELETE FROM sqlite_sequence WHERE name = 'locations'").run();
 }
 
+export async function deleteLocation(id: number): Promise<void> {
+  await db.delete(locations).where(eq(locations.id, id)).run();
+}
+
 function weatherToColumns(weather: WeatherSnapshot) {
   return {
     condition: weather.condition,
