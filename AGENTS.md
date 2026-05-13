@@ -1,5 +1,4 @@
 # Agent Instructions
-
 `weather-starter` is a full-stack monorepo application using React, Express, and SQLite.
 
 ## Essentials
@@ -35,5 +34,5 @@ Update an existing skill whenever:
 - New tools or packages change the workflow
 
 ### Skill Naming Convention
-- Use lowercase with hyphens: `git-commit-writer`, `api-error-handler`
+- Use lowercase with hyphens: `git-commit-writer`
 - Name describes the task, not the tool: `weather-data-fetcher` not `axios-helper`
