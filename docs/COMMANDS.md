@@ -7,12 +7,13 @@ Run all commands from the **root directory**.
 - `npm run dev`: Starts the development server (orchestrates frontend and backend via `scripts/dev.mjs`).
 - `npm run build`: Builds both frontend and backend workspaces.
 - `npm run start`: Starts the production server.
+- `npm run docs`: Starts the Astro Starlight documentation site at `http://localhost:4321`.
 
 ## Testing & Quality
 
 - `npm test` or `npm run test:watch`: Runs Vitest test suite.
 - `npm run lint`: Lints the codebase with the root ESLint flat config.
-- `npx prettier --write .`: Formats code.
+- `npm run format`: Formats frontend, backend, scripts, and docs with the shared root Prettier config.
 
 Before finishing code changes, run the project quality gate from the root:
 

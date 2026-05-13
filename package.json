@@ -10,7 +10,9 @@
     "start": "node scripts/start.mjs",
     "doctor": "node scripts/doctor.mjs",
     "reset": "node scripts/reset.mjs",
+    "docs": "npm run dev -w docs",
     "lint": "eslint .",
+    "format": "prettier --write .",
     "test": "NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest run",
     "test:watch": "NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest",
     "db:generate": "drizzle-kit generate",
@@ -18,7 +20,8 @@
   },
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "docs"
   ],
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.4",

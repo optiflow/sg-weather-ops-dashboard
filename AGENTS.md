@@ -36,3 +36,18 @@ Use the `update-skill` skill to update an existing skill whenever:
 ### Skill Naming Convention
 - Use lowercase with hyphens: `git-commit-writer`
 - Name describes the task, not the tool: `weather-data-fetcher` not `axios-helper`
+
+## Sub-Agents Management
+
+### When to Create a Sub-Agent
+Create a sub-agent whenever:
+- A specific, complex role requires a dedicated persona (e.g., code reviewer, UI designer).
+- You need a focused agent with specific system prompts, constraints, and responsibilities.
+- The instructions are more about *how* to act and review, rather than just a linear workflow of steps (which is a Skill).
+
+### Where to Store Sub-Agents
+- Project sub-agents: `.agents/<sub-agent-name>/agent.md`
+
+### Sub-Agent Naming Convention
+- Directory uses lowercase with hyphens: `code-reviewer`
+- File is always named: `agent.md`

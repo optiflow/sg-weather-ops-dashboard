@@ -6,13 +6,13 @@ The app tracks Singapore locations and stores their latest weather. It uses a No
 
 ## Tech Stack
 
-| Layer        | Tools                                                                 |
-| ------------ | --------------------------------------------------------------------- |
-| Backend      | Node.js, TypeScript, Express                                          |
-| Frontend     | React 18, Vite, Tailwind CSS                                          |
-| Dev URL      | Portless named `.localhost` URLs                                      |
-| External API | Singapore data.gov.sg (`api-open.data.gov.sg`)                        |
-| Storage      | SQLite database at `backend/weather.db` through Drizzle ORM           |
+| Layer        | Tools                                                       |
+| ------------ | ----------------------------------------------------------- |
+| Backend      | Node.js, TypeScript, Express                                |
+| Frontend     | React 18, Vite, Tailwind CSS                                |
+| Dev URL      | Portless named `.localhost` URLs                            |
+| External API | Singapore data.gov.sg (`api-open.data.gov.sg`)              |
+| Storage      | SQLite database at `backend/weather.db` through Drizzle ORM |
 
 ## Architecture
 
@@ -143,16 +143,16 @@ weather-starter/
 
 The base URL is `https://api-open.data.gov.sg`. You do not need an API key for basic use. High traffic may trigger rate limits.
 
-| Endpoint                                       | Docs                                                                                        | Notes                                                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `GET /v2/real-time/api/two-hr-forecast`        | [2-hour Forecast](https://data.gov.sg/datasets/d_3f9e064e25005b0e42969944ccaf2e7a/view)     | The app uses this. Response has `area_metadata` and forecasts.                                |
-| `GET /v2/real-time/api/air-temperature`        | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station temperature in Celsius.                                                               |
-| `GET /v2/real-time/api/relative-humidity`      | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station humidity percentage.                                                                  |
-| `GET /v2/real-time/api/rainfall`               | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station rainfall in mm.                                                                       |
-| `GET /v2/real-time/api/wind-speed`             | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station wind speed in knots.                                                                  |
-| `GET /v2/real-time/api/wind-direction`         | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station wind direction in degrees.                                                            |
-| `GET /v1/environment/24-hour-weather-forecast` | [Weather Forecast](https://data.gov.sg/collections/weather-forecast/view)                   | 24-hour forecast in time blocks. This has a different shape than the 2-hour endpoint.         |
-| `GET /v1/environment/4-day-weather-forecast`   | [Weather Forecast](https://data.gov.sg/collections/weather-forecast/view)                   | 4-day outlook with temperatures and text.                                                     |
+| Endpoint                                       | Docs                                                                                        | Notes                                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `GET /v2/real-time/api/two-hr-forecast`        | [2-hour Forecast](https://data.gov.sg/datasets/d_3f9e064e25005b0e42969944ccaf2e7a/view)     | The app uses this. Response has `area_metadata` and forecasts.                        |
+| `GET /v2/real-time/api/air-temperature`        | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station temperature in Celsius.                                                       |
+| `GET /v2/real-time/api/relative-humidity`      | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station humidity percentage.                                                          |
+| `GET /v2/real-time/api/rainfall`               | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station rainfall in mm.                                                               |
+| `GET /v2/real-time/api/wind-speed`             | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station wind speed in knots.                                                          |
+| `GET /v2/real-time/api/wind-direction`         | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Station wind direction in degrees.                                                    |
+| `GET /v1/environment/24-hour-weather-forecast` | [Weather Forecast](https://data.gov.sg/collections/weather-forecast/view)                   | 24-hour forecast in time blocks. This has a different shape than the 2-hour endpoint. |
+| `GET /v1/environment/4-day-weather-forecast`   | [Weather Forecast](https://data.gov.sg/collections/weather-forecast/view)                   | 4-day outlook with temperatures and text.                                             |
 
 Use an API key:
 
@@ -169,29 +169,29 @@ These tasks range from simple to hard. Each one builds on the code and adds conc
 
 Add a `DELETE /api/locations/:id` endpoint. Add a delete button to cards in `SidebarCard.tsx`.
 
-| Layer    | Action                                  |
-| -------- | --------------------------------------- |
-| Backend  | Add DELETE endpoint for locations       |
-| Frontend | Add button to `SidebarCard.tsx`         |
+| Layer    | Action                            |
+| -------- | --------------------------------- |
+| Backend  | Add DELETE endpoint for locations |
+| Frontend | Add button to `SidebarCard.tsx`   |
 
 ### 2. Geolocation + auto-detect
 
 Add a "Use my location" button. It must find the user's position, get the nearest Singapore area, and add it. This works on local setups. For HTTPS, run Portless with `PORTLESS_HTTPS=1`.
 
-| Layer    | Action                                                                              |
-| -------- | ----------------------------------------------------------------------------------- |
-| Backend  | No changes if nearest-area logic exists                                             |
+| Layer    | Action                                                                                |
+| -------- | ------------------------------------------------------------------------------------- |
+| Backend  | No changes if nearest-area logic exists                                               |
 | Frontend | Add button to `AddLocationForm.tsx` using Geolocation API. Auto-refresh after adding. |
 
 ### 3. Singapore area picker
 
 Replace lat/lon inputs with a dropdown. The 2-hour forecast has `area_metadata` with names and coordinates.
 
-| Layer        | Action                                                                                      |
-| ------------ | ------------------------------------------------------------------------------------------- |
-| Backend      | Return forecast areas if the frontend needs them                                            |
-| Frontend     | Replace lat/lon fields with a dropdown using `area_metadata`                                |
-| External API | `GET /v2/real-time/api/two-hr-forecast` -> `area_metadata` array                            |
+| Layer        | Action                                                           |
+| ------------ | ---------------------------------------------------------------- |
+| Backend      | Return forecast areas if the frontend needs them                 |
+| Frontend     | Replace lat/lon fields with a dropdown using `area_metadata`     |
+| External API | `GET /v2/real-time/api/two-hr-forecast` -> `area_metadata` array |
 
 ### 4. Current conditions ✅
 
@@ -207,21 +207,21 @@ Show temperature, humidity, and rainfall next to the forecast. These share the s
 
 Add an hourly timeline and a 4-day forecast below the conditions. The 24-hour endpoint returns data by region. The 4-day endpoint gives daily ranges and text. These `v1` endpoints use a different shape than the 2-hour API.
 
-| Layer        | Action                                                                                                                |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Backend      | Add methods and endpoints, like `GET /api/locations/:id/forecast`                                                     |
-| Frontend     | Build a scrolling hourly row and a daily list showing text, icons, and temperatures                                   |
-| External API | `GET /v1/environment/24-hour-weather-forecast`, `GET /v1/environment/4-day-weather-forecast`                          |
+| Layer        | Action                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------- |
+| Backend      | Add methods and endpoints, like `GET /api/locations/:id/forecast`                            |
+| Frontend     | Build a scrolling hourly row and a daily list showing text, icons, and temperatures          |
+| External API | `GET /v1/environment/24-hour-weather-forecast`, `GET /v1/environment/4-day-weather-forecast` |
 
 ### 6. Wind and atmospheric data ✅
 
 Add a section for wind speed and direction. Show wind with an arrow or animation.
 
-| Layer        | Action                                                                          |
-| ------------ | ------------------------------------------------------------------------------- |
-| Backend      | Fetch wind data and update refresh logic or add an endpoint                     |
-| Frontend     | Create a `WindCompass` component to show wind visually                           |
-| External API | `GET /v2/real-time/api/wind-speed`, `GET /v2/real-time/api/wind-direction`      |
+| Layer        | Action                                                                     |
+| ------------ | -------------------------------------------------------------------------- |
+| Backend      | Fetch wind data and update refresh logic or add an endpoint                |
+| Frontend     | Create a `WindCompass` component to show wind visually                     |
+| External API | `GET /v2/real-time/api/wind-speed`, `GET /v2/real-time/api/wind-direction` |
 
 ### 7. UI and theming ✅
 
@@ -229,21 +229,21 @@ Redesign the app layout. Use nice cards, clear icons, responsive design, and smo
 
 Add a map card. Show saved locations as pins with weather labels. The card expands to full-screen. Users still add locations via the main form, not the map.
 
-| Layer        | Action                                                                                                                                           |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Backend      | None                                                                                                                                             |
-| Frontend     | Restyle components using Tailwind. Add icons, colors, mobile support, and a map card with Leaflet or similar tool.                               |
-| NPM packages | `leaflet`, `react-leaflet` or equivalent                                                                                                         |
+| Layer        | Action                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Backend      | None                                                                                                               |
+| Frontend     | Restyle components using Tailwind. Add icons, colors, mobile support, and a map card with Leaflet or similar tool. |
+| NPM packages | `leaflet`, `react-leaflet` or equivalent                                                                           |
 
 ### 8. Detail page with charts
 
 Add a detail view. Show charts for past temperature, rainfall, and humidity. Save each refresh as a new reading instead of replacing the snapshot.
 
-| Layer        | Action                                                                                    |
-| ------------ | ----------------------------------------------------------------------------------------- |
-| Backend      | Add history model and endpoint for time-series data                                       |
-| Frontend     | Build a detail page with charts using Recharts, Chart.js, or similar library              |
-| NPM packages | `react-router-dom`, `recharts` or equivalent                                              |
+| Layer        | Action                                                                       |
+| ------------ | ---------------------------------------------------------------------------- |
+| Backend      | Add history model and endpoint for time-series data                          |
+| Frontend     | Build a detail page with charts using Recharts, Chart.js, or similar library |
+| NPM packages | `react-router-dom`, `recharts` or equivalent                                 |
 
 ### 9. Multi-location management
 
