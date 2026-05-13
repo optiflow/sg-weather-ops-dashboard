@@ -1,40 +1,56 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Weather Starter
+description: A full-stack Singapore weather dashboard built with React, Express, and SQLite.
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../assets/houston.webp
+  tagline: A full-stack monorepo for tracking real-time Singapore weather. Built with React, Express, Drizzle ORM, and the data.gov.sg API.
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Getting Started
+      link: /guides/getting-started/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
+    - text: API Reference
+      link: /reference/api-endpoints/
       icon: external
       variant: minimal
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Next steps
+## What is Weather Starter?
+
+Weather Starter is an educational full-stack monorepo that pulls real-time weather observations from Singapore's open data APIs. Users save coordinates, and the app fetches forecasts, temperature, humidity, wind, rainfall, air quality, and UV readings for the nearest station.
+
+## Architecture at a Glance
+
+```mermaid
+graph LR
+  subgraph Browser
+    A["React SPA<br/>(Vite + Tailwind)"]
+  end
+  subgraph Server
+    B["Express API"]
+    C["SQLite<br/>(Drizzle ORM)"]
+  end
+  D["data.gov.sg<br/>Weather APIs"]
+
+  A -- "fetch /api/*" --> B
+  B -- "read / write" --> C
+  B -- "HTTP GET" --> D
+```
+
+## Key Features
 
 <CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+  <Card title="Real-Time Data" icon="sun">
+    Pulls 2-hour forecasts, temperature, humidity, wind, rainfall, UV index, PSI, and PM2.5 from Singapore's open-data APIs.
+  </Card>
+  <Card title="Location Tracking" icon="pencil">
+    Save multiple Singapore coordinates. Each location gets its own weather snapshot with nearest-station matching.
+  </Card>
+  <Card title="Apple-Style Dashboard" icon="laptop">
+    Sidebar + hero layout with hourly forecasts, 4-day outlook, interactive Leaflet map, and metric tiles.
+  </Card>
+  <Card title="Multiple Themes" icon="setting">
+    Switch between Apple, Cotton Candy, Night City, Pixel, and Terminal visual themes.
+  </Card>
 </CardGrid>
