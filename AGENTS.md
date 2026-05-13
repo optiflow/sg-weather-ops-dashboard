@@ -28,7 +28,7 @@ Create a new skill whenever:
 - Global skills: `~/.gemini/antigravity/skills/<skill-name>/SKILL.md`
 
 ### When to Update an Existing SKILL.md
-Update an existing skill whenever:
+Use the `update-skill` skill to update an existing skill whenever:
 - A better approach is discovered
 - A step in the skill no longer works
 - New tools or packages change the workflow
