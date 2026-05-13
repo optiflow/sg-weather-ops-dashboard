@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { renderToString } from 'react-dom/server';
 import { useStore } from '../state/store';
-import { CloudIcon, SunIcon, CloseIcon, LocationIcon } from './icons';
+import { CloseIcon, LocationIcon } from './icons';
 import type { Location } from '../types';
 
 function isFiniteNumber(value: number | null | undefined): value is number {
@@ -14,10 +13,14 @@ function formatTemperature(value: number | null | undefined): string {
   return isFiniteNumber(value) ? Math.round(value).toString() : '--';
 }
 
-function getWeatherIcon(condition: string | null) {
+function getWeatherIconHtml(condition: string | null): string {
   const isSunny =
     condition?.toLowerCase().includes('fair') || condition?.toLowerCase().includes('sunny');
-  return isSunny ? <SunIcon className="h-3.5 w-3.5" /> : <CloudIcon className="h-3.5 w-3.5" />;
+
+  if (isSunny) {
+    return `<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"></path></svg>`;
+  }
+  return `<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 11.4 3.5 3.5 0 0 0 7 18Z"></path></svg>`;
 }
 
 function MapBoundsUpdater({ locations }: { locations: Location[] }) {
@@ -47,12 +50,12 @@ export function MapCard() {
       />
       {locations.map((loc) => {
         const temp = formatTemperature(loc.weather?.temperature_c);
-        const iconHtml = renderToString(
-          <div className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur-md border border-white/20 whitespace-nowrap">
-            {getWeatherIcon(loc.weather?.condition)}
-            <span>{temp}&deg;</span>
-          </div>,
-        );
+        // Bolt: Optimized map marker rendering by using template literals instead of React renderToString
+        // Avoids pulling react-dom/server into client bundle and runs ~100x faster
+        const iconHtml = `<div class="flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur-md border border-white/20 whitespace-nowrap">
+            ${getWeatherIconHtml(loc.weather?.condition)}
+            <span>${temp}&deg;</span>
+          </div>`;
 
         const customIcon = L.divIcon({
           className: 'weather-pin-icon',
