@@ -97,6 +97,8 @@ The app uses a snapshot pattern. It does not call the external API on every page
 
 ```text
 weather-starter/
+├── .agents/
+│   └── skills/                        # Custom agent skills and workflows
 ├── backend/
 │   ├── drizzle/                       # Generated Drizzle SQL migrations
 │   ├── package.json
@@ -110,6 +112,8 @@ weather-starter/
 │       └── routes/
 │           ├── locations.ts           # Location endpoints
 │           └── locations.test.ts      # Location API tests
+├── config/                            # Project configuration files
+├── docs/                              # Project documentation and guidelines
 ├── frontend/
 │   ├── index.html
 │   ├── package.json
@@ -128,8 +132,11 @@ weather-starter/
 │   ├── start.mjs
 │   ├── doctor.mjs
 │   └── reset.mjs
+├── AGENTS.md                          # Core rules and agent instructions
+├── drizzle.config.ts                  # Drizzle ORM configuration
 ├── package.json
-└── package-lock.json
+├── package-lock.json
+└── vitest.config.ts                   # Vitest testing configuration
 ```
 
 ## External API Reference
@@ -158,7 +165,7 @@ npm run dev
 
 These tasks range from simple to hard. Each one builds on the code and adds concepts. File names may differ, but the behavior must stay the same.
 
-### 1. Delete a location
+### 1. Delete a location ✅
 
 Add a `DELETE /api/locations/:id` endpoint. Add a delete button to cards in `SidebarCard.tsx`.
 
@@ -186,7 +193,7 @@ Replace lat/lon inputs with a dropdown. The 2-hour forecast has `area_metadata` 
 | Frontend     | Replace lat/lon fields with a dropdown using `area_metadata`                                |
 | External API | `GET /v2/real-time/api/two-hr-forecast` -> `area_metadata` array                            |
 
-### 4. Current conditions
+### 4. Current conditions ✅
 
 Show temperature, humidity, and rainfall next to the forecast. These share the station-reading pattern with coordinates.
 
@@ -196,7 +203,7 @@ Show temperature, humidity, and rainfall next to the forecast. These share the s
 | Frontend     | Update location cards to show temperature, humidity, and rainfall                                                    |
 | External API | `GET /v2/real-time/api/air-temperature`, `GET /v2/real-time/api/relative-humidity`, `GET /v2/real-time/api/rainfall` |
 
-### 5. Hourly and daily forecast
+### 5. Hourly and daily forecast ✅
 
 Add an hourly timeline and a 4-day forecast below the conditions. The 24-hour endpoint returns data by region. The 4-day endpoint gives daily ranges and text. These `v1` endpoints use a different shape than the 2-hour API.
 
@@ -206,7 +213,7 @@ Add an hourly timeline and a 4-day forecast below the conditions. The 24-hour en
 | Frontend     | Build a scrolling hourly row and a daily list showing text, icons, and temperatures                                   |
 | External API | `GET /v1/environment/24-hour-weather-forecast`, `GET /v1/environment/4-day-weather-forecast`                          |
 
-### 6. Wind and atmospheric data
+### 6. Wind and atmospheric data ✅
 
 Add a section for wind speed and direction. Show wind with an arrow or animation.
 
@@ -216,7 +223,7 @@ Add a section for wind speed and direction. Show wind with an arrow or animation
 | Frontend     | Create a `WindCompass` component to show wind visually                           |
 | External API | `GET /v2/real-time/api/wind-speed`, `GET /v2/real-time/api/wind-direction`      |
 
-### 7. UI and theming
+### 7. UI and theming ✅
 
 Redesign the app layout. Use nice cards, clear icons, responsive design, and smooth states. Build a modern dashboard that keeps workflows obvious.
 
