@@ -184,27 +184,37 @@ export class SingaporeWeatherClient {
     const settle = async <T>(promise: Promise<T>) => {
       try {
         const value = await promise;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
         return { status: 'fulfilled' as const, value };
       } catch (reason) {
         return { status: 'rejected' as const, reason };
       }
     };
 
-    const forecastPayload = await settle(this.fetchLatestForecastPayload());
-    const airTemp = await settle(this.fetchNearestReading('air-temperature', latitude, longitude));
-    const relativeHumidity = await settle(
-      this.fetchNearestReading('relative-humidity', latitude, longitude),
-    );
-    const rainfall = await settle(this.fetchNearestReading('rainfall', latitude, longitude));
-    const windSpeed = await settle(this.fetchNearestReading('wind-speed', latitude, longitude));
-    const windDirection = await settle(
-      this.fetchNearestReading('wind-direction', latitude, longitude),
-    );
-    const uvIndex = await settle(this.fetchUvIndex());
-    const airQuality = await settle(this.fetchAirQuality(latitude, longitude));
-    const twentyFourHour = await settle(this.fetchTwentyFourHourForecast(latitude, longitude));
-    const fourDay = await settle(this.fetchFourDayForecast());
+    const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    const [
+      forecastPayload,
+      airTemp,
+      relativeHumidity,
+      rainfall,
+      windSpeed,
+      windDirection,
+      uvIndex,
+      airQuality,
+      twentyFourHour,
+      fourDay,
+    ] = await Promise.all([
+      settle(delay(0).then(() => this.fetchLatestForecastPayload())),
+      settle(delay(250).then(() => this.fetchNearestReading('air-temperature', latitude, longitude))),
+      settle(delay(500).then(() => this.fetchNearestReading('relative-humidity', latitude, longitude))),
+      settle(delay(750).then(() => this.fetchNearestReading('rainfall', latitude, longitude))),
+      settle(delay(1000).then(() => this.fetchNearestReading('wind-speed', latitude, longitude))),
+      settle(delay(1250).then(() => this.fetchNearestReading('wind-direction', latitude, longitude))),
+      settle(delay(1500).then(() => this.fetchUvIndex())),
+      settle(delay(1750).then(() => this.fetchAirQuality(latitude, longitude))),
+      settle(delay(2000).then(() => this.fetchTwentyFourHourForecast(latitude, longitude))),
+      settle(delay(2250).then(() => this.fetchFourDayForecast())),
+    ]);
 
     const snapshot =
       forecastPayload.status === 'fulfilled'
@@ -337,9 +347,8 @@ export class SingaporeWeatherClient {
     const psiPayload = await this.fetchJson<PsiPayload>(
       `${this.apiBaseUrl()}/v2/real-time/api/psi`,
     );
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const pm25Payload = await this.fetchJson<PsiPayload>(
-      `${this.apiBaseUrl()}/v2/real-time/api/pm25`,
+    const pm25Payload = await new Promise<void>((resolve) => setTimeout(resolve, 250)).then(() =>
+      this.fetchJson<PsiPayload>(`${this.apiBaseUrl()}/v2/real-time/api/pm25`)
     );
     for (const payload of [psiPayload, pm25Payload]) {
       if (payload.code !== undefined && payload.code !== 0) {
