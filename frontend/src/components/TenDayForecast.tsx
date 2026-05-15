@@ -1,5 +1,5 @@
-import { CalendarIcon, CloudIcon } from './icons';
 import type { DailyForecast, WeatherSnapshot } from '../types';
+import { CalendarIcon, CloudIcon } from './icons';
 
 interface TenDayForecastProps {
   weather: WeatherSnapshot;

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
 export type Theme = 'apple' | 'cotton-candy' | 'night-city' | 'pixel' | 'terminal';
 

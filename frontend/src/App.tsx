@@ -1,6 +1,6 @@
+import { Layout } from './components/Layout';
 import { StoreProvider } from './state/store';
 import { ThemeProvider } from './state/themeStore';
-import { Layout } from './components/Layout';
 
 export function App() {
   return (

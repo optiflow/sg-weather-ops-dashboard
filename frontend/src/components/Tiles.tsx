@@ -1,6 +1,6 @@
-import { CloudIcon, DropletIcon, SunIcon, ThermometerIcon, TrendIcon, WindIcon } from './icons';
 import type { ReactNode } from 'react';
 import type { WeatherSnapshot } from '../types';
+import { CloudIcon, DropletIcon, SunIcon, ThermometerIcon, TrendIcon, WindIcon } from './icons';
 
 interface WeatherProps {
   weather: WeatherSnapshot;

@@ -27,8 +27,8 @@ Defined in the root `package.json`:
 | `docs` | `npm run dev -w docs` | Start Starlight docs site |
 | `test` | `vitest run` | Run test suite |
 | `test:watch` | `vitest` | Run tests in watch mode |
-| `lint` | `eslint .` | Lint with ESLint flat config |
-| `format` | `prettier --write .` | Format with Prettier |
+| `lint` | `biome check .` | Lint and format check with Biome |
+| `format` | `biome format --write .` | Format with Biome |
 | `db:generate` | `drizzle-kit generate` | Generate Drizzle migrations |
 | `db:migrate` | `drizzle-kit migrate` | Apply Drizzle migrations |
 | `doctor` | `node scripts/doctor.mjs` | Troubleshoot local state |
@@ -62,19 +62,14 @@ Configured in `drizzle.config.ts` at the project root:
 - **Migrations output**: `backend/drizzle/`
 - **Database URL**: `DATABASE_PATH` env var or `./backend/weather.db`
 
-## ESLint
+## Biome
 
-Uses the ESLint flat config format (`eslint.config.js`) with:
+Uses `biome.json` at the root for both linting and formatting:
 
-- `@eslint/js` recommended rules
-- `typescript-eslint` recommended rules
-- `eslint-plugin-react` + `eslint-plugin-react-hooks` for frontend files
-- `eslint-config-prettier` to disable formatting rules
-- `docs/**` is excluded from linting (separate Astro config)
-
-## Prettier
-
-Configured in `prettier.config.js`. Formatting ignores are listed in `.prettierignore`.
+- Replaces both ESLint and Prettier
+- Includes React hook rules
+- Configured to mimic Prettier defaults (single quotes, trailing commas)
+- `docs/**` is excluded from linting (uses separate Astro config)
 
 ## Logging
 

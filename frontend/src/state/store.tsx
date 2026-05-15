@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import {
-  listLocations,
   createLocation,
-  refreshLocation,
   deleteLocation,
+  listLocations,
   logInteraction,
+  refreshLocation,
 } from '../api';
 import type { CreateLocationPayload, Location, ProviderProps, StoreValue } from '../types';
 
@@ -33,7 +33,6 @@ export function StoreProvider({ children }: ProviderProps) {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load-on-mount syncs API → React state
     load().then((next) => {
       if (next.length > 0) setSelectedId((current) => current ?? next[0].id);
     });

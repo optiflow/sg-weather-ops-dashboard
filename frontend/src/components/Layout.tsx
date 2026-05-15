@@ -1,5 +1,5 @@
-import { Sidebar } from './Sidebar';
 import { Hero } from './Hero';
+import { Sidebar } from './Sidebar';
 import { ThemeSelector } from './ThemeSelector';
 
 export function Layout() {

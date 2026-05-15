@@ -1,8 +1,8 @@
-import { defineConfig, type PluginOption } from 'vite';
-import react from '@vitejs/plugin-react';
-import { frontmanPlugin } from '@frontman-ai/vite';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { frontmanPlugin } from '@frontman-ai/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig, type PluginOption } from 'vite';
 
 const frontendRoot = dirname(fileURLToPath(import.meta.url));
 

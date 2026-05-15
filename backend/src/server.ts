@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import express from 'express';
-import pinoHttpModule from 'pino-http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
+import express from 'express';
+import pinoHttpModule from 'pino-http';
 import { logger } from './logger.js';
+import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;

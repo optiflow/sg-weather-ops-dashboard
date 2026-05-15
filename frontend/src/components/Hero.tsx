@@ -1,10 +1,10 @@
-import { useStore, useSelectedLocation } from '../state/store';
-import { LocationIcon, RefreshIcon } from './icons';
-import { HourlyStrip } from './HourlyStrip';
-import { TenDayForecast } from './TenDayForecast';
-import { MapCard } from './MapCard';
-import { TileGrid } from './Tiles';
+import { useSelectedLocation, useStore } from '../state/store';
 import { formatTemperature, formatTime } from './format';
+import { HourlyStrip } from './HourlyStrip';
+import { LocationIcon, RefreshIcon } from './icons';
+import { MapCard } from './MapCard';
+import { TenDayForecast } from './TenDayForecast';
+import { TileGrid } from './Tiles';
 
 export function Hero() {
   const { locations, refresh, refreshingId } = useStore();

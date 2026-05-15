@@ -1,4 +1,4 @@
-import { Theme, useTheme } from '../state/themeStore';
+import { type Theme, useTheme } from '../state/themeStore';
 
 export function ThemeSelector() {
   const { theme, setTheme } = useTheme();

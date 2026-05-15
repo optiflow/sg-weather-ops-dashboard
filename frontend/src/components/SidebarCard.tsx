@@ -1,8 +1,8 @@
-import { useStore } from '../state/store';
-import { CloudIcon, HomeIcon, CloseIcon } from './icons';
-import { formatTemperature, formatTime } from './format';
 import type { KeyboardEvent } from 'react';
+import { useStore } from '../state/store';
 import type { Location } from '../types';
+import { formatTemperature, formatTime } from './format';
+import { CloseIcon, CloudIcon, HomeIcon } from './icons';
 
 interface SidebarCardProps {
   location: Location;
@@ -29,6 +29,7 @@ export function SidebarCard({ location, isHome }: SidebarCardProps) {
     }
   };
   return (
+    // biome-ignore lint/a11y/useSemanticElements: nested interactive elements are not supported by semantic buttons
     <div
       role="button"
       tabIndex={0}
@@ -42,6 +43,7 @@ export function SidebarCard({ location, isHome }: SidebarCardProps) {
       }`}
     >
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           void remove(location.id);

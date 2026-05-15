@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
+import { AddLocationForm } from './AddLocationForm';
 import { SearchIcon } from './icons';
 import { SidebarCard } from './SidebarCard';
-import { AddLocationForm } from './AddLocationForm';
 
 export function Sidebar() {
   const { locations, isLoading } = useStore();

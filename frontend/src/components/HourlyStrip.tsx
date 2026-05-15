@@ -1,5 +1,5 @@
-import { CloudIcon, SunIcon } from './icons';
 import type { ForecastPeriod } from '../types';
+import { CloudIcon, SunIcon } from './icons';
 
 interface HourlyStripProps {
   periods?: ForecastPeriod[];

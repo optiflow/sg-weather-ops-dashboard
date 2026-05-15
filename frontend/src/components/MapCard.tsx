@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useEffect, useState } from 'react';
 import { renderToString } from 'react-dom/server';
+import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
 import { useStore } from '../state/store';
-import { CloudIcon, SunIcon, CloseIcon, LocationIcon } from './icons';
 import type { Location } from '../types';
+import { CloseIcon, CloudIcon, LocationIcon, SunIcon } from './icons';
 
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -98,6 +98,8 @@ export function MapCard() {
   }
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: non-interactive element used for layout clicking
+    // biome-ignore lint/a11y/noStaticElementInteractions: non-interactive element used for layout clicking
     <section
       className="group relative flex flex-col gap-3 rounded-2xl border border-white/15 bg-white/[0.08] p-4 backdrop-blur-xl cursor-pointer hover:bg-white/[0.12] transition-colors overflow-hidden"
       onClick={() => setIsFullscreen(true)}

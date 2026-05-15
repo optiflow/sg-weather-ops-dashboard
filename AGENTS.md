@@ -1,6 +1,11 @@
 # Agent Instructions
 `weather-starter` is a full-stack monorepo application using React, Express, and SQLite.
 
+## Reasoning approach
+- Apply 'Mutually Exclusive, Completely Exhaustive' & 'Minto Pyramid' principles.
+- Analyze issues through first-principle thinking instead of through analogy.
+- Be objective and unbiased. Avoid sycophancy.
+
 ## Essentials
 - **Package Manager**: npm (uses npm workspaces)
 - **Primary Dev Command**: `npm run dev`

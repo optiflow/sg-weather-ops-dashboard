@@ -2,13 +2,13 @@ import type { Router } from 'express';
 import { Router as createRouter } from 'express';
 import {
   createLocation,
+  deleteLocation,
   getLocation,
   listLocations,
   updateWeather,
-  deleteLocation,
 } from '../db.js';
-import { SingaporeWeatherClient, WeatherProviderError, type WeatherSnapshot } from '../weather.js';
 import { logger } from '../logger.js';
+import { SingaporeWeatherClient, WeatherProviderError, type WeatherSnapshot } from '../weather.js';
 
 export interface WeatherClient {
   getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot>;
