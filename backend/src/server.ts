@@ -25,13 +25,22 @@ export async function createApp(options: AppOptions = {}) {
     app.use(pinoHttp({ logger }));
   }
 
+  // Security headers to prevent basic attacks
+  app.use((_request, response, next) => {
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+  });
+
   app.use((request, response, next) => {
     if (request.path.startsWith('/frontman')) {
       next();
       return;
     }
 
-    express.json()(request, response, next);
+    // Limit JSON payload size to prevent DoS attacks
+    express.json({ limit: '10kb' })(request, response, next);
   });
 
   app.get('/health', (_request, response) => {
