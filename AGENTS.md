@@ -1,8 +1,6 @@
 ---
 name: weather-starter-agent-contract
-version: 0.1.0
-author: repository-maintainers
-license: unspecified
+version: 1.0.0
 package_manager: npm
 entrypoint: "npm run dev"
 ---
@@ -32,22 +30,6 @@ When instructions conflict, follow the higher-priority instruction. For safety b
 - `.agents/code-review/agent.md` - Project code-review sub-agent definition.
 
 Use the root `package-lock.json` and npm workspaces. Do not introduce another package manager.
-
-## Environment Setup
-Copy `.env.example` to `.env` and fill in values. The app runs with defaults for local development but these variables are available:
-
-- `WEATHER_API_KEY` — Optional data.gov.sg API key for higher rate limits. The app works without it for light local usage.
-- `PORTLESS_PORT` — Local browser URL port used by `scripts/dev.mjs` via Portless (default: `1355`).
-- `PORTLESS_HTTPS` — Set to `1` to enable HTTPS mode via Portless (default: `0`).
-- `DATABASE_PATH` — Optional path for the local SQLite database (default: `backend/weather.db`).
-
-Do not commit `.env` or `.env.*` files. The `.gitignore` allows `.env.example` and `.env.local.example`.
-
-## Git Workflow
-- Husky is configured via `npm run prepare` (runs on `npm install`).
-- The pre-commit hook is currently a no-op — do not add lint or test checks there without explicit approval, as they may block iterative work.
-- Use descriptive commit messages. Follow the style of recent commits (see `git log`).
-- Prefer small, focused commits for individual changes and a single PR per feature or fix.
 
 ## Read First
 Read only the references needed for the current task:
@@ -114,7 +96,7 @@ Use least privilege. Treat these categories as the default operating policy.
 - Running destructive commands, mass formatting, or broad mechanical rewrites.
 - Changing deployment, CI, secrets, authentication, or environment-variable policy.
 - Browser automation against non-local or untrusted URLs.
-- Editing protected policy/config areas such as `.agents/`, unless the user explicitly requested that work.
+- Editing protected policy/config areas such as `.agents/` or `.codex/`, unless the user explicitly requested that work.
 
 ### Never
 - Commit, print, log, or store secrets, tokens, cookies, private keys, or `.env` contents.
@@ -137,28 +119,17 @@ Use least privilege. Treat these categories as the default operating policy.
 - Use `import type` for type-only imports.
 - Prefer structured APIs, schemas, and existing helper modules over ad hoc string parsing.
 - Keep shared types in dedicated type files when they cross module boundaries.
+- Frontend changes should preserve responsive layout, accessibility, and existing visual conventions.
+- Backend changes should validate inputs, keep route logic testable, and use Drizzle for SQLite persistence.
 - Database schema changes should use the `drizzle-sqlite-migration` skill and update migrations, tests, and docs together.
-
-### Frontend Conventions
-- State management uses React Context + `useState` (no external state library). See `frontend/src/state/store.tsx` and `frontend/src/state/themeStore.tsx`.
-- Follow the existing Context/Provider pattern when adding new state domains.
-- Preserve responsive layout, accessibility, and existing visual conventions.
-- Leaflet map components should follow patterns in `frontend-visual-qa`.
-
-### Backend Conventions
-- Express routes live in `backend/src/routes/`. Keep route handlers thin — validate inputs, delegate to helpers, return structured responses.
-- Validate inputs at the route boundary before passing to business logic.
-- Use Drizzle for SQLite persistence; never write raw SQL.
-- Pino logging uses structured object-first pattern: `logger.info({ url }, 'message')`, `logger.error({ err }, 'message')`. Log level controlled by `LOG_LEVEL` env var (defaults to `info`, `silent` in test).
-- HTTP request logging is handled automatically by `pino-http` middleware.
 
 ## Testing and Verification
 Match verification to the risk and surface area:
 
 - Pure logic: focused unit tests.
-- Express routes or database behavior: route and persistence tests using Vitest + Supertest (see `backend/src/routes/locations.test.ts` for the pattern).
+- Express routes or database behavior: route and persistence tests.
 - Weather API behavior: fixtures or controlled API-shape tests using `sg-weather-api` guidance.
-- Frontend behavior: the frontend has no test infrastructure yet. For UI changes, rely on visual QA using `frontend-visual-qa` and manual browser verification. When adding frontend tests, use Vitest with `@testing-library/react` and add the config to `frontend/`.
+- Frontend behavior: component or integration checks plus visual QA when layout, map behavior, or responsive UI changes.
 - Documentation-only changes: verify links, commands, and referenced paths; run the quality gate if the docs affect executable workflows.
 
 Use `repo-quality-gate` before finishing code or documentation tasks unless the user explicitly narrows the request or local constraints prevent it. If a check cannot be run, state why.
@@ -199,16 +170,16 @@ Store project sub-agents at `.agents/<sub-agent-name>/agent.md`. Use lowercase h
 ## Current Inventory
 
 ### Skills
-| Skill | Purpose | Use When |
-| --- | --- | --- |
-| `sg-weather-api` | Singapore data.gov.sg weather API shapes and usage patterns. | Adding or modifying weather data fetching, API routes, or response handling. |
-| `drizzle-sqlite-migration` | SQLite persistence, Drizzle schema, migrations, database helpers, tests, and docs. | Changing database schema, adding tables/columns, or running migrations. |
-| `frontend-visual-qa` | Responsive UI, theme, Leaflet map, and browser behavior verification. | Changing layout, styling, map components, or responsive behavior. |
-| `chrome-devtools` | Chrome DevTools debugging, screenshots, network inspection, and Lighthouse checks. | Debugging runtime issues, inspecting network requests, or checking performance. |
-| `weather-feature-workflow` | End-to-end weather features spanning API routes, data, React state, and dashboard UI. | Building a feature that touches both backend and frontend (e.g., adding a new weather data view). |
-| `repo-quality-gate` | Final verification workflow for tests, build, lint, and docs review. | Finishing any code or documentation task before reporting done. |
-| `create-skill` | Create new skills or substantially redesign skill structure. | A workflow is repeated more than twice or has more than three steps. |
-| `update-skill` | Maintain existing skills when workflow steps, tooling, or repo conventions change. | An existing skill is outdated due to tooling, package, or repo changes. |
+| Skill | Purpose |
+| --- | --- |
+| `sg-weather-api` | Singapore data.gov.sg weather API shapes and usage patterns. |
+| `drizzle-sqlite-migration` | SQLite persistence, Drizzle schema, migrations, database helpers, tests, and docs. |
+| `frontend-visual-qa` | Responsive UI, theme, Leaflet map, and browser behavior verification. |
+| `chrome-devtools` | Chrome DevTools debugging, screenshots, network inspection, and Lighthouse checks. |
+| `weather-feature-workflow` | End-to-end weather features spanning API routes, data, React state, and dashboard UI. |
+| `repo-quality-gate` | Final verification workflow for tests, build, lint, and docs review. |
+| `create-skill` | Create new skills or substantially redesign skill structure. |
+| `update-skill` | Maintain existing skills when workflow steps, tooling, or repo conventions change. |
 
 ### Sub-Agents
 | Sub-Agent | Location | Purpose |
