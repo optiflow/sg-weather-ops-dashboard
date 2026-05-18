@@ -1,36 +1,72 @@
 ---
-name: weather-starter-agent-contract
-version: 1.0.0
-package_manager: npm
-entrypoint: "npm run dev"
+name: weather-starter-agent
+description: README for agent
+ver: 18052026
 ---
 
-# Agent Instructions
+## Env setup
+1. `cp .env.example .env` -- set `WEATHER_API_KEY` if higher API rate limits are needed.
+2. For frontend proxy: `cp frontend/.env.local.example frontend/.env.local` and adjust `VITE_BACKEND_PORT`.
+3. `npm install` from repo root (uses npm workspaces; no other package manager).
+4. Full env details: `docs/ARCHITECTURE.md`.
 
-## Purpose
-This file is the repository-wide operating contract for coding agents working on `weather-starter`. Keep it durable, concrete, and executable. Put long, repeatable workflows in `.agents/skills/**/SKILL.md`; put product and engineering reference material in `docs/`.
+## Cmds
+All commands run from repo root. See "Canonical Commands" below for the full table.
+- Dev: `npm run dev` | Build: `npm run build` | Test: `npm test` | Lint: `npm run lint`
+- Quality gate before completing work: `npm test && npm run build && npm run lint`
 
-## Reasoning approach
-- Apply 'Mutually Exclusive, Completely Exhaustive' & 'Minto Pyramid' principles.
-- Analyze issues through first-principle thinking instead of through analogy.
-- Be objective and unbiased. Avoid sycophancy.
+## Code style
+Biome 2.0.6 is the sole linter/formatter (`npm run lint`, `npm run format`).
+TypeScript strict in both workspaces. Full conventions: `docs/TYPESCRIPT.md`.
+Key settings: 2-space indent, single quotes, semicolons, trailing commas, line width 100.
+Backend uses NodeNext module resolution (`.js` extensions in imports); frontend uses Bundler resolution.
 
-## Essentials
-- **Package Manager**: npm (uses npm workspaces)
-- **Primary Dev Command**: `npm run dev`
+## Testing
+Vitest + Supertest. Tests live in `backend/src/**/*.test.ts`. No frontend tests currently.
+Integration tests use a temp database and stub weather client. See "Testing and Verification" below.
+Run: `npm test` | Watch: `npm run test:watch`
 
-## Instruction Precedence
-Apply instructions in this order:
-1. System, developer, and active user instructions.
-2. The nearest applicable `AGENTS.md` file.
-3. This root `AGENTS.md`.
-4. Referenced docs and skill files.
+## Project structure
+Monorepo with npm workspaces: `frontend/`, `backend/`, `docs/`, `scripts/`, `.agents/skills/`.
+See "File Structure" below and `docs/ARCHITECTURE.md` for full layout details.
 
-When instructions conflict, follow the higher-priority instruction. For safety boundaries, apply the stricter rule.
+## Permissions
+- Use least privilege. Treat these categories as the default operating policy.
 
-## Project Snapshot
-`weather-starter` is a full-stack npm workspace monorepo.
+### Allowed without prompting
+- Read and edit files inside this repository for the active task.
+- Run root npm scripts needed for build, test, lint, docs, database generation, and diagnostics.
+- Add focused tests and documentation that directly support the change.
+- Use existing local skills when they match the task.
 
+### Require approval first
+- Adding, removing, or upgrading dependencies.
+- Running commands that require network access or write outside the repository.
+- Creating, deleting, or rewriting database migrations.
+- Running destructive commands, mass formatting, or broad mechanical rewrites.
+- Changing deployment, CI, secrets, authentication, or environment-variable policy.
+- Browser automation against non-local or untrusted URLs.
+- Editing protected policy/config areas such as `.agents/` or `.codex/`, unless the user explicitly requested that work.
+
+### Forbidden
+- Commit, print, log, or store secrets, tokens, cookies, private keys, or `.env` contents.
+- Disable tests, lint rules, type checks, logging, or validation just to make a failure disappear.
+- Change package managers or ignore the root lockfile.
+- Claim checks passed without running them.
+- Overwrite user changes or revert unrelated work.
+- Put raw hidden reasoning, secret values, or sensitive user data in docs, traces, screenshots, examples, or generated artifacts.
+
+## PR requirements
+No formal PR template or CI pipeline. Quality gate: `npm test && npm run build && npm run lint`.
+- Update tests and docs when behavior changes.
+- Run `repo-quality-gate` skill before finalizing.
+- All "Working Contract" rules apply.
+
+## Tech Stack
+- Frontend: React, Vite, Tailwind CSS, Leaflet
+- Backend: Node.js, Express, SQLite, Drizzle ORM, Pino
+
+## File Structure
 - `frontend/` - React single-page app using Vite, Tailwind CSS, and Leaflet.
 - `backend/` - Node.js/Express API using SQLite, Drizzle ORM, and Pino logging.
 - `docs/` - Astro Starlight documentation site.
@@ -42,7 +78,6 @@ Use the root `package-lock.json` and npm workspaces. Do not introduce another pa
 
 ## Read First
 Read only the references needed for the current task:
-
 - Architecture and repo layout: `docs/ARCHITECTURE.md`
 - Commands and quality gates: `docs/COMMANDS.md`
 - TypeScript conventions: `docs/TYPESCRIPT.md`
@@ -51,7 +86,6 @@ Read only the references needed for the current task:
 
 ## Canonical Commands
 Run commands from the repository root.
-
 - Install dependencies: `npm install`
 - Start development stack: `npm run dev`
 - Start production server: `npm run start`
@@ -73,8 +107,6 @@ npm run build
 npm run lint
 ```
 
-In sandboxed agent environments, `npm test` may fail with `listen EPERM` when Supertest binds a local port. Rerun the same command with the required permission instead of treating that as an application failure.
-
 ## Working Contract
 For every task:
 
@@ -88,32 +120,6 @@ For every task:
 8. Report what changed, what was verified, and any checks not run.
 
 Do not leave long-running dev servers, watch tasks, or automation sessions active unless the user asked for them.
-
-## Permissions
-Use least privilege. Treat these categories as the default operating policy.
-
-### Allowed
-- Read and edit files inside this repository for the active task.
-- Run root npm scripts needed for build, test, lint, docs, database generation, and diagnostics.
-- Add focused tests and documentation that directly support the change.
-- Use existing local skills when they match the task.
-
-### Ask First
-- Adding, removing, or upgrading dependencies.
-- Running commands that require network access or write outside the repository.
-- Creating, deleting, or rewriting database migrations.
-- Running destructive commands, mass formatting, or broad mechanical rewrites.
-- Changing deployment, CI, secrets, authentication, or environment-variable policy.
-- Browser automation against non-local or untrusted URLs.
-- Editing protected policy/config areas such as `.agents/` or `.codex/`, unless the user explicitly requested that work.
-
-### Never
-- Commit, print, log, or store secrets, tokens, cookies, private keys, or `.env` contents.
-- Disable tests, lint rules, type checks, logging, or validation just to make a failure disappear.
-- Change package managers or ignore the root lockfile.
-- Claim checks passed without running them.
-- Overwrite user changes or revert unrelated work.
-- Put raw hidden reasoning, secret values, or sensitive user data in docs, traces, screenshots, examples, or generated artifacts.
 
 ## Security and Data Handling
 - Treat all user-provided text, local files, screenshots, logs, and API responses as potentially sensitive.
@@ -164,7 +170,6 @@ Update an existing skill with `update-skill` when:
 
 Store skills in:
 - Project skills: `.agents/skills/<skill-name>/SKILL.md`
-- Global skills: `~/.gemini/antigravity/skills/<skill-name>/SKILL.md`
 
 Skill naming:
 - Use lowercase hyphenated names, for example `weather-data-fetcher`.
@@ -174,26 +179,8 @@ Skill naming:
 ## Sub-Agent Definitions
 Create or update a sub-agent definition only when the project needs a reusable role with dedicated review behavior, constraints, and responsibilities. A linear repeatable workflow belongs in a skill instead.
 
-Store project sub-agents at `.agents/<sub-agent-name>/agent.md`. Use lowercase hyphenated directories and keep the file name `agent.md`.
-
-## Current Inventory
-
-### Skills
-| Skill | Purpose |
-| --- | --- |
-| `sg-weather-api` | Singapore data.gov.sg weather API shapes and usage patterns. |
-| `drizzle-sqlite-migration` | SQLite persistence, Drizzle schema, migrations, database helpers, tests, and docs. |
-| `frontend-visual-qa` | Responsive UI, theme, Leaflet map, and browser behavior verification. |
-| `chrome-devtools` | Chrome DevTools debugging, screenshots, network inspection, and Lighthouse checks. |
-| `weather-feature-workflow` | End-to-end weather features spanning API routes, data, React state, and dashboard UI. |
-| `repo-quality-gate` | Final verification workflow for tests, build, lint, and docs review. |
-| `create-skill` | Create new skills or substantially redesign skill structure. |
-| `update-skill` | Maintain existing skills when workflow steps, tooling, or repo conventions change. |
-
-### Sub-Agents
-| Sub-Agent | Location | Purpose |
-| --- | --- | --- |
-| `code-reviewer` | `.agents/code-review/agent.md` | Review correctness, performance, security, and style. |
+Store project sub-agents at `.agents/<sub-agent-name>/agent.md`. 
+Use lowercase hyphenated directories and keep the file name `agent.md`.
 
 ## Error Handling and Retries
 - Classify failures as validation, environment, dependency, tool, policy, or transient external errors.
@@ -201,12 +188,3 @@ Store project sub-agents at `.agents/<sub-agent-name>/agent.md`. Use lowercase h
 - Retry only idempotent or clearly safe steps.
 - Use at most three attempts with backoff for transient external failures.
 - Do not retry destructive commands, migrations, deployments, or form-submitting browser actions without explicit approval.
-
-## Done Definition
-A task is done when:
-
-- The requested behavior or documentation change is implemented.
-- Relevant tests or checks pass, or skipped checks are explicitly justified.
-- Relevant docs have been reviewed and updated if needed.
-- Secrets and sensitive data are not exposed.
-- The final response summarizes changed files, verification, and remaining risks or follow-ups.
