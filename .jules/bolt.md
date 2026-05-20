@@ -1,0 +1,3 @@
+## 2026-05-20 - Staggered concurrent API requests
+**Learning:** Sequential API calls with large arbitrary delays (like `await new Promise((resolve) => setTimeout(resolve, 1000));` between each call) significantly bottleneck response times. However, making fully concurrent requests can easily trigger HTTP 429 rate limits (e.g. `api-open.data.gov.sg`).
+**Action:** Use a staggered concurrency approach: execute multiple requests using `Promise.all` but wrap each call in a thunk that awaits an incrementally increasing `setTimeout` delay. This bypasses rate limits while running substantially faster than sequentially awaiting each delay.
