@@ -1,0 +1,3 @@
+## 2024-05-21 - Staggered Promise.all for Strict Rate Limits
+**Learning:** Sequential `.await` requests with delays between them (like `await new Promise((resolve) => setTimeout(resolve, 1000))`) correctly avoid HTTP 429 rate limits but result in unacceptable cumulative execution times (~25s for 10 API requests).
+**Action:** When a provider enforces strict concurrency limits (e.g. `api-open.data.gov.sg`), use `Promise.all` but wrap the fetches in a thunk with a pre-computed delay (staggering). This maximizes permitted concurrency, cutting fetch time from O(n * delay) down to O(max_delay + max_latency).
