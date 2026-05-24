@@ -10,6 +10,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;
 const FRONTEND_EVENT_PATTERN = /^[a-z][a-z0-9_.:-]{1,63}$/;
 
+// Simple in-memory rate limiter for the API to prevent DoS
+const rateLimitMap = new Map<string, { count: number; expiresAt: number }>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of rateLimitMap.entries()) {
+    if (now > data.expiresAt) {
+      rateLimitMap.delete(ip);
+    }
+  }
+}, 60000).unref();
+
 interface AppOptions {
   serveFrontend?: boolean;
   enableRequestLogging?: boolean;
@@ -25,6 +36,9 @@ export async function createApp(options: AppOptions = {}) {
     app.use(pinoHttp({ logger }));
   }
 
+  // Trust proxy to ensure request.ip correctly resolves behind load balancers/reverse proxies
+  app.set('trust proxy', 1);
+
   // Security enhancements: add basic headers natively
   app.use((_request, response, next) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -37,6 +51,26 @@ export async function createApp(options: AppOptions = {}) {
     if (request.path.startsWith('/frontman')) {
       next();
       return;
+    }
+
+    // Apply rate limit on all API routes
+    if (request.path.startsWith('/api')) {
+      const ip = request.ip || request.socket.remoteAddress || 'unknown';
+      const now = Date.now();
+      const limitData = rateLimitMap.get(ip) || { count: 0, expiresAt: now + 60000 };
+
+      if (now > limitData.expiresAt) {
+        limitData.count = 0;
+        limitData.expiresAt = now + 60000;
+      }
+
+      limitData.count += 1;
+      rateLimitMap.set(ip, limitData);
+
+      if (limitData.count > 100) {
+        response.status(429).json({ detail: 'Too many requests, please try again later.' });
+        return;
+      }
     }
 
     // Security enhancements: add payload size limit to prevent DoS
