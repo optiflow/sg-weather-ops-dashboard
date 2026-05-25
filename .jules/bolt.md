@@ -1,0 +1,3 @@
+## 2024-05-25 - Async Data Fetching Bottlenecks with Rate Limits
+**Learning:** Sequential async operations limit performance significantly, but blindly using `Promise.all` can fail strict rate limits (like HTTP 429 errors from `api-open.data.gov.sg`).
+**Action:** Use a staggered concurrent execution pattern. Implement a `settle` wrapper taking a factory (thunk) and an initial delay parameter. Pass increasing delays to stagger the start time of the `Promise.all` tasks. This preserves rate limit constraints while achieving massive speedups over sequential execution.
