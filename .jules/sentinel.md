@@ -1,4 +1,4 @@
-## 2024-05-17 - Added basic security headers and JSON payload limits natively
-**Vulnerability:** Missing basic security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection) and unbounded JSON payload sizes which can lead to DoS.
-**Learning:** Native Express middleware can be configured to provide basic security headers and JSON payload size limits without adding external dependencies like Helmet, which might have overly strict defaults (like CSP blocking external maps).
-**Prevention:** Always ensure standard security headers are set and consider payload size limits as a base defense against simple DoS attacks.
+## 2024-05-24 - Rate Limiter without Dependencies
+**Vulnerability:** Native Express server without rate limits exposing it to brute force and DoS attacks.
+**Learning:** You can add rate limiting correctly using an in-memory `Map` storing the timestamps and request limits instead of resorting to external dependencies like `express-rate-limit`. But the `Map` configuration logic must be stored outside of the `createApp` block, to avoid recreating it dynamically causing Node.JS memory leak, hanging testing environments.
+**Prevention:** Make sure rate limit maps are declared at root level outside block scoping, attach `.unref()` to periodic `setInterval` eviction ticks, and add bypass conditional specifically for `process.env.NODE_ENV === 'test'` inside the middleware logic. Use `app.set('trust proxy', 1)` to verify users connecting from proxy properly.
