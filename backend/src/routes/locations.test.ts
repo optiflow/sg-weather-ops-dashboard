@@ -112,6 +112,51 @@ describe('locations API', () => {
     expect(listResponse.body.locations[0].weather.condition).toBe('Cloudy');
   });
 
+  it('returns an existing location by id', async () => {
+    const createResponse = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85 })
+      .expect(201);
+
+    const response = await request(app).get(`/api/locations/${createResponse.body.id}`).expect(200);
+
+    expect(response.body).toMatchObject({
+      id: createResponse.body.id,
+      latitude: 1.35,
+      longitude: 103.85,
+      weather: {
+        condition: 'Cloudy',
+        area: 'Bishan',
+      },
+    });
+  });
+
+  it('keeps a manually created location when initial weather refresh fails', async () => {
+    weatherRequestHandler = async () => {
+      throw new WeatherProviderError('Weather provider rate limit reached (HTTP 429)');
+    };
+
+    const response = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85 })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      id: 1,
+      latitude: 1.35,
+      longitude: 103.85,
+      weather: {
+        condition: 'Not refreshed',
+        area: null,
+      },
+    });
+    expect(weatherRequests).toEqual([{ latitude: 1.35, longitude: 103.85 }]);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(1);
+    expect(listResponse.body.locations[0].weather.condition).toBe('Not refreshed');
+  });
+
   it('creates a location from the nearest forecast area for browser coordinates', async () => {
     const response = await request(app)
       .post('/api/locations/from-position')
@@ -274,6 +319,21 @@ describe('locations API', () => {
     }
   });
 
+  it('rejects manually added outside-Singapore coordinates', async () => {
+    const response = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.6, longitude: 104.2 })
+      .expect(422);
+
+    expect(response.body).toEqual({
+      detail: 'Coordinates must be within Singapore (lat 1.1-1.5, lon 103.6-104.1)',
+    });
+    expect(weatherRequests).toHaveLength(0);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(0);
+  });
+
   it('returns conflict for duplicate coordinates', async () => {
     await request(app)
       .post('/api/locations')
@@ -306,6 +366,44 @@ describe('locations API', () => {
     const response = await request(app).post('/api/locations/999/refresh').expect(404);
 
     expect(response.body).toEqual({ detail: 'Location not found' });
+  });
+
+  it('refreshes an existing location and persists updated weather', async () => {
+    const createResponse = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85 })
+      .expect(201);
+    const refreshedWeather: WeatherSnapshot = {
+      ...weather,
+      condition: 'Showers',
+      observed_at: '2026-05-04T01:00:00Z',
+      temperature_c: 27,
+    };
+    weatherRequestHandler = async () => refreshedWeather;
+
+    const response = await request(app)
+      .post(`/api/locations/${createResponse.body.id}/refresh`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      id: createResponse.body.id,
+      latitude: 1.35,
+      longitude: 103.85,
+      weather: {
+        condition: 'Showers',
+        observed_at: '2026-05-04T01:00:00Z',
+        temperature_c: 27,
+      },
+    });
+    expect(weatherRequests).toEqual([
+      { latitude: 1.35, longitude: 103.85 },
+      { latitude: 1.35, longitude: 103.85 },
+    ]);
+
+    const getResponse = await request(app)
+      .get(`/api/locations/${createResponse.body.id}`)
+      .expect(200);
+    expect(getResponse.body.weather.condition).toBe('Showers');
   });
 
   it('returns bad gateway when the weather provider fails during refresh', async () => {
