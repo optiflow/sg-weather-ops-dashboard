@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migrate } from 'drizzle-orm/sqlite-proxy/migrator';
 import { locations, type WeatherSnapshot } from './schema.js';
@@ -88,6 +88,18 @@ export async function createLocation(latitude: number, longitude: number): Promi
 
 export async function getLocation(id: number): Promise<LocationRecord | null> {
   const row = await db.select().from(locations).where(eq(locations.id, id)).get();
+  return row ? rowToRecord(row) : null;
+}
+
+export async function getLocationByCoordinates(
+  latitude: number,
+  longitude: number,
+): Promise<LocationRecord | null> {
+  const row = await db
+    .select()
+    .from(locations)
+    .where(and(eq(locations.latitude, latitude), eq(locations.longitude, longitude)))
+    .get();
   return row ? rowToRecord(row) : null;
 }
 

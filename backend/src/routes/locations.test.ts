@@ -3,7 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { WeatherProviderError, type WeatherSnapshot } from '../weather.js';
+import {
+  type TwoHourForecastArea,
+  WeatherProviderError,
+  type WeatherSnapshot,
+} from '../weather.js';
 
 const weather: WeatherSnapshot = {
   condition: 'Cloudy',
@@ -28,18 +32,30 @@ const weather: WeatherSnapshot = {
   ],
 };
 
+const bishanArea: TwoHourForecastArea = {
+  name: 'Bishan',
+  latitude: 1.352,
+  longitude: 103.849,
+};
+
 describe('locations API', () => {
   let tempDir: string;
   let app: Awaited<ReturnType<typeof import('../server.js').createApp>>;
   let resetStore: () => Promise<void>;
   let deleteStoredLocation: (id: number) => Promise<void>;
   let weatherRequestHandler: (latitude: number, longitude: number) => Promise<WeatherSnapshot>;
+  let nearestAreaHandler: (latitude: number, longitude: number) => Promise<TwoHourForecastArea>;
+  let weatherRequests: Array<{ latitude: number; longitude: number }>;
+  let nearestAreaRequests: Array<{ latitude: number; longitude: number }>;
 
   beforeAll(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'weather-starter-test-'));
     process.env.DATABASE_PATH = join(tempDir, 'weather.db');
     process.env.LOG_LEVEL = 'silent';
     weatherRequestHandler = async () => weather;
+    nearestAreaHandler = async () => bishanArea;
+    weatherRequests = [];
+    nearestAreaRequests = [];
 
     const { createApp } = await import('../server.js');
     app = await createApp({
@@ -47,7 +63,12 @@ describe('locations API', () => {
       enableRequestLogging: false,
       weatherClient: {
         async getCurrentWeather(latitude, longitude) {
+          weatherRequests.push({ latitude, longitude });
           return weatherRequestHandler(latitude, longitude);
+        },
+        async getNearestTwoHourForecastArea(latitude, longitude) {
+          nearestAreaRequests.push({ latitude, longitude });
+          return nearestAreaHandler(latitude, longitude);
         },
       },
     });
@@ -59,6 +80,9 @@ describe('locations API', () => {
 
   beforeEach(async () => {
     weatherRequestHandler = async () => weather;
+    nearestAreaHandler = async () => bishanArea;
+    weatherRequests = [];
+    nearestAreaRequests = [];
     await resetStore();
   });
 
@@ -86,6 +110,152 @@ describe('locations API', () => {
     const listResponse = await request(app).get('/api/locations').expect(200);
     expect(listResponse.body.locations).toHaveLength(1);
     expect(listResponse.body.locations[0].weather.condition).toBe('Cloudy');
+  });
+
+  it('creates a location from the nearest forecast area for browser coordinates', async () => {
+    const response = await request(app)
+      .post('/api/locations/from-position')
+      .send({ latitude: 1.3001, longitude: 103.8001 })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      created: true,
+      matched_area: bishanArea,
+      location: {
+        id: 1,
+        latitude: bishanArea.latitude,
+        longitude: bishanArea.longitude,
+        weather: {
+          condition: 'Cloudy',
+          area: 'Bishan',
+          temperature_c: 29,
+        },
+      },
+    });
+    expect(nearestAreaRequests).toEqual([{ latitude: 1.3001, longitude: 103.8001 }]);
+    expect(weatherRequests).toEqual([
+      { latitude: bishanArea.latitude, longitude: bishanArea.longitude },
+    ]);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(1);
+    expect(listResponse.body.locations[0]).toMatchObject({
+      latitude: bishanArea.latitude,
+      longitude: bishanArea.longitude,
+    });
+  });
+
+  it('returns an existing canonical forecast-area location as idempotent success', async () => {
+    const first = await request(app)
+      .post('/api/locations/from-position')
+      .send({ latitude: 1.3001, longitude: 103.8001 })
+      .expect(201);
+
+    const second = await request(app)
+      .post('/api/locations/from-position')
+      .send({ latitude: 1.3202, longitude: 103.8302 })
+      .expect(200);
+
+    expect(second.body).toMatchObject({
+      created: false,
+      matched_area: bishanArea,
+      location: {
+        id: first.body.location.id,
+        latitude: bishanArea.latitude,
+        longitude: bishanArea.longitude,
+      },
+    });
+    expect(nearestAreaRequests).toHaveLength(2);
+    expect(weatherRequests).toHaveLength(1);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(1);
+  });
+
+  it('rejects invalid browser coordinates without resolving a forecast area', async () => {
+    const invalidBodies = [
+      { latitude: '1.35', longitude: 103.85 },
+      { latitude: [1.35], longitude: 103.85 },
+      { latitude: true, longitude: 103.85 },
+      { latitude: null, longitude: 103.85 },
+      { longitude: 103.85 },
+      { latitude: 1.35, longitude: '103.85' },
+    ];
+
+    for (const body of invalidBodies) {
+      const response = await request(app)
+        .post('/api/locations/from-position')
+        .send(body)
+        .expect(422);
+      expect(response.body).toEqual({ detail: 'latitude and longitude are required' });
+    }
+    expect(nearestAreaRequests).toHaveLength(0);
+    expect(weatherRequests).toHaveLength(0);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(0);
+  });
+
+  it('rejects outside-Singapore browser coordinates without resolving a forecast area', async () => {
+    const response = await request(app)
+      .post('/api/locations/from-position')
+      .send({ latitude: 1.6, longitude: 104.2 })
+      .expect(422);
+
+    expect(response.body).toEqual({
+      detail: 'Coordinates must be within Singapore (lat 1.1-1.5, lon 103.6-104.1)',
+    });
+    expect(nearestAreaRequests).toHaveLength(0);
+    expect(weatherRequests).toHaveLength(0);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(0);
+  });
+
+  it('does not create a location when forecast-area metadata lookup fails', async () => {
+    nearestAreaHandler = async () => {
+      throw new WeatherProviderError('Forecast response has no area metadata');
+    };
+
+    const response = await request(app)
+      .post('/api/locations/from-position')
+      .send({ latitude: 1.3001, longitude: 103.8001 })
+      .expect(502);
+
+    expect(response.body).toEqual({ detail: 'Forecast response has no area metadata' });
+    expect(nearestAreaRequests).toEqual([{ latitude: 1.3001, longitude: 103.8001 }]);
+    expect(weatherRequests).toHaveLength(0);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(0);
+  });
+
+  it('keeps the canonical location when weather refresh fails after browser-position create', async () => {
+    weatherRequestHandler = async () => {
+      throw new WeatherProviderError('Weather provider rate limit reached (HTTP 429)');
+    };
+
+    const response = await request(app)
+      .post('/api/locations/from-position')
+      .send({ latitude: 1.3001, longitude: 103.8001 })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      created: true,
+      matched_area: bishanArea,
+      location: {
+        latitude: bishanArea.latitude,
+        longitude: bishanArea.longitude,
+        weather: {
+          condition: 'Not refreshed',
+          area: null,
+        },
+      },
+    });
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(1);
+    expect(listResponse.body.locations[0].weather.condition).toBe('Not refreshed');
   });
 
   it('rejects coordinates that are not finite JSON numbers', async () => {

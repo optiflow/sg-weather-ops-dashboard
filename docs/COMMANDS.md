@@ -12,8 +12,8 @@ Run all commands from the **root directory**.
 ## Testing & Quality
 
 - `npm test` or `npm run test:watch`: Runs Vitest test suite.
-- `npm run lint`: Lints the codebase with the root ESLint flat config.
-- `npm run format`: Formats frontend, backend, scripts, and docs with the shared root Prettier config.
+- `npm run lint`: Checks linting and formatting with Biome.
+- `npm run format`: Formats the codebase with Biome.
 
 Before finishing code changes, run the project quality gate from the root:
 

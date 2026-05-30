@@ -67,7 +67,9 @@ npm run db:migrate  # Apply Drizzle migrations to backend/weather.db
 | `GET`  | `/health`                    | Health check                   |
 | `GET`  | `/api/locations`             | List all locations             |
 | `POST` | `/api/locations`             | Create a location              |
+| `POST` | `/api/locations/from-position` | Add nearest forecast area from browser position |
 | `GET`  | `/api/locations/:id`         | Get a single location          |
+| `DELETE` | `/api/locations/:id`       | Delete a location              |
 | `POST` | `/api/locations/:id/refresh` | Refresh weather for a location |
 
 Create a location:
@@ -88,10 +90,11 @@ curl -s -X POST http://weather-starter.localhost:1355/api/locations/1/refresh
 
 The app uses a snapshot pattern. It does not call the external API on every page load:
 
-1. You create a location. The app saves the coordinates and adds a placeholder status.
-2. The backend fetches data from data.gov.sg. It saves the snapshot and returns the location.
-3. The app lists locations from `backend/weather.db` using Drizzle ORM.
-4. You trigger a manual refresh. The app fetches new data, saves the snapshot, and returns the location.
+1. You create a location manually, or click **Use my location** to resolve browser coordinates to the nearest Singapore 2-hour forecast area.
+2. The app saves exact manual coordinates or canonical forecast-area coordinates and adds a placeholder status.
+3. The backend fetches data from data.gov.sg. It saves the snapshot and returns the location.
+4. The app lists locations from `backend/weather.db` using Drizzle ORM.
+5. You trigger a manual refresh. The app fetches new data, saves the snapshot, and returns the location.
 
 ## Project Structure
 
@@ -174,14 +177,14 @@ Add a `DELETE /api/locations/:id` endpoint. Add a delete button to cards in `Sid
 | Backend  | Add DELETE endpoint for locations |
 | Frontend | Add button to `SidebarCard.tsx`   |
 
-### 2. Geolocation + auto-detect
+### 2. Geolocation + auto-detect ✅
 
 Add a "Use my location" button. It must find the user's position, get the nearest Singapore area, and add it. This works on local setups. For HTTPS, run Portless with `PORTLESS_HTTPS=1`.
 
-| Layer    | Action                                                                                |
-| -------- | ------------------------------------------------------------------------------------- |
-| Backend  | No changes if nearest-area logic exists                                               |
-| Frontend | Add button to `AddLocationForm.tsx` using Geolocation API. Auto-refresh after adding. |
+| Layer    | Action                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------- |
+| Backend  | Add `POST /api/locations/from-position` and nearest 2-hour forecast-area matching            |
+| Frontend | Add an always-visible sidebar button using the Geolocation API and select the saved location |
 
 ### 3. Singapore area picker
 

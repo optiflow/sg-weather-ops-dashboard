@@ -82,3 +82,5 @@ The backend uses [Pino](https://getpino.io/) for structured JSON logging:
 ## Dev Server (Portless)
 
 `scripts/dev.mjs` wraps the backend with [Portless](https://github.com/nicepkg/portless), which provides a stable local URL (`weather-starter.localhost:1355`) regardless of the actual port Express binds to.
+
+Browser geolocation is expected to work on `localhost` and `*.localhost` local origins. If a browser blocks geolocation over HTTP during **Use my location** testing, set `PORTLESS_HTTPS=1` when running `npm run dev`.

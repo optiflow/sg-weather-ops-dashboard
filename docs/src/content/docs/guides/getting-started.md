@@ -32,6 +32,12 @@ Once started, open the URL printed to the terminal. By default it is:
 http://weather-starter.localhost:1355
 ```
 
+Browser geolocation for **Use my location** should work on `localhost` and `*.localhost` origins. If your browser requires HTTPS for local geolocation, start the app with:
+
+```bash
+PORTLESS_HTTPS=1 npm run dev
+```
+
 ## Environment Variables
 
 Create a `.env` file in the project root (one is included by default):
@@ -56,8 +62,8 @@ Tests use Vitest with Supertest. The test suite creates a temporary SQLite datab
 ## Lint and Format
 
 ```bash
-npm run lint      # ESLint (flat config)
-npm run format    # Prettier
+npm run lint      # Biome check
+npm run format    # Biome format
 ```
 
 ## Build for Production

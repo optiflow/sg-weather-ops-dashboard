@@ -1,12 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import {
   createLocation,
+  createLocationFromPosition,
   deleteLocation,
   listLocations,
   logInteraction,
   refreshLocation,
 } from '../api';
-import type { CreateLocationPayload, Location, ProviderProps, StoreValue } from '../types';
+import type {
+  CreateLocationPayload,
+  Location,
+  LocationFromPositionResponse,
+  ProviderProps,
+  StoreValue,
+} from '../types';
 
 const StoreContext = createContext<StoreValue | null>(null);
 
@@ -63,6 +70,30 @@ export function StoreProvider({ children }: ProviderProps) {
         logInteraction('location_create_failed', {
           latitude: payload.latitude,
           longitude: payload.longitude,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        throw err;
+      }
+    },
+    [load],
+  );
+
+  const createFromPosition = useCallback(
+    async (payload: CreateLocationPayload): Promise<LocationFromPositionResponse> => {
+      setError(null);
+      logInteraction('location_from_position_submitted');
+      try {
+        const result = await createLocationFromPosition(payload);
+        await load();
+        setSelectedId(result.location.id);
+        logInteraction('location_from_position_added', {
+          locationId: result.location.id,
+          created: result.created,
+        });
+        return result;
+      } catch (err) {
+        setError(err);
+        logInteraction('location_from_position_failed', {
           error: err instanceof Error ? err.message : 'Unknown error',
         });
         throw err;
@@ -129,6 +160,7 @@ export function StoreProvider({ children }: ProviderProps) {
       if (nextIsAdding) logInteraction('location_form_opened');
     },
     create,
+    createFromPosition,
     refresh,
     remove,
   };

@@ -46,6 +46,18 @@ export interface CreateLocationPayload {
   longitude: number;
 }
 
+export interface MatchedArea {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface LocationFromPositionResponse {
+  location: Location;
+  created: boolean;
+  matched_area: MatchedArea;
+}
+
 export interface StoreValue {
   locations: Location[];
   selectedId: number | null;
@@ -56,6 +68,7 @@ export interface StoreValue {
   select: (id: number | null) => void;
   setAdding: (isAdding: boolean) => void;
   create: (payload: CreateLocationPayload) => Promise<void>;
+  createFromPosition: (payload: CreateLocationPayload) => Promise<LocationFromPositionResponse>;
   refresh: (id: number) => Promise<void>;
   remove: (id: number) => Promise<void>;
 }

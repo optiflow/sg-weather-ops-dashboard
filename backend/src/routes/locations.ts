@@ -4,14 +4,21 @@ import {
   createLocation,
   deleteLocation,
   getLocation,
+  getLocationByCoordinates,
   listLocations,
   updateWeather,
 } from '../db.js';
 import { logger } from '../logger.js';
-import { SingaporeWeatherClient, WeatherProviderError, type WeatherSnapshot } from '../weather.js';
+import {
+  SingaporeWeatherClient,
+  type TwoHourForecastArea,
+  WeatherProviderError,
+  type WeatherSnapshot,
+} from '../weather.js';
 
 export interface WeatherClient {
   getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot>;
+  getNearestTwoHourForecastArea(latitude: number, longitude: number): Promise<TwoHourForecastArea>;
 }
 
 interface LocationsRouterOptions {
@@ -27,6 +34,80 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
     try {
       response.json({ locations: await listLocations() });
     } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/locations/from-position', async (request, response, next) => {
+    try {
+      const body = request.body as { latitude?: unknown; longitude?: unknown } | undefined;
+      const latitude = body?.latitude;
+      const longitude = body?.longitude;
+
+      if (!isFiniteNumber(latitude) || !isFiniteNumber(longitude)) {
+        response.status(422).json({ detail: 'latitude and longitude are required' });
+        return;
+      }
+      if (!isSingaporeCoordinate(latitude, longitude)) {
+        response.status(422).json({
+          detail: 'Coordinates must be within Singapore (lat 1.1-1.5, lon 103.6-104.1)',
+        });
+        return;
+      }
+
+      const matchedArea = await weatherClient.getNearestTwoHourForecastArea(latitude, longitude);
+      const existingLocation = await getLocationByCoordinates(
+        matchedArea.latitude,
+        matchedArea.longitude,
+      );
+      if (existingLocation) {
+        response.json({ location: existingLocation, created: false, matched_area: matchedArea });
+        return;
+      }
+
+      let location: Awaited<ReturnType<typeof createLocation>>;
+      try {
+        location = await createLocation(matchedArea.latitude, matchedArea.longitude);
+      } catch (error) {
+        if (isDuplicateLocationError(error)) {
+          const duplicateLocation = await getLocationByCoordinates(
+            matchedArea.latitude,
+            matchedArea.longitude,
+          );
+          if (duplicateLocation) {
+            response.json({
+              location: duplicateLocation,
+              created: false,
+              matched_area: matchedArea,
+            });
+            return;
+          }
+        }
+        throw error;
+      }
+
+      try {
+        const snapshot = await weatherClient.getCurrentWeather(
+          location.latitude,
+          location.longitude,
+        );
+        const updated = await updateWeather(location.id, snapshot);
+        response
+          .status(201)
+          .json({ location: updated ?? location, created: true, matched_area: matchedArea });
+      } catch (error) {
+        if (!(error instanceof WeatherProviderError)) throw error;
+        logger.warn(
+          { err: error, locationId: location.id },
+          'weather refresh failed after location create from browser position',
+        );
+        response.status(201).json({ location, created: true, matched_area: matchedArea });
+      }
+    } catch (error) {
+      if (error instanceof WeatherProviderError) {
+        response.status(502).json({ detail: error.message });
+        return;
+      }
       next(error);
     }
   });
@@ -66,7 +147,7 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
         response.status(201).json(location);
       }
     } catch (error) {
-      if (error instanceof Error && error.name === 'DuplicateLocationError') {
+      if (isDuplicateLocationError(error)) {
         logger.warn({ err: error }, 'duplicate location rejected');
         response.status(409).json({ detail: error.message });
         return;
@@ -133,4 +214,12 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isSingaporeCoordinate(latitude: number, longitude: number): boolean {
+  return 1.1 <= latitude && latitude <= 1.5 && 103.6 <= longitude && longitude <= 104.1;
+}
+
+function isDuplicateLocationError(error: unknown): error is Error {
+  return error instanceof Error && error.name === 'DuplicateLocationError';
 }

@@ -15,6 +15,7 @@ graph TD
   Layout --> Sidebar
   Layout --> Hero
   Sidebar --> SearchBox["Search Input"]
+  Sidebar --> UseMyLocationButton
   Sidebar --> AddLocationForm
   Sidebar --> SidebarCard["SidebarCard ×N"]
   Hero --> HourlyStrip
@@ -54,6 +55,7 @@ Holds all application state for locations and exposes actions through a `StoreVa
 | `select(id)` | Select a location |
 | `setAdding(flag)` | Toggle the add-location form |
 | `create(payload)` | Create a location via the API |
+| `createFromPosition(payload)` | Add/select a canonical forecast-area location from browser coordinates |
 | `refresh(id)` | Refresh weather for a location |
 | `remove(id)` | Delete a location |
 
@@ -69,7 +71,7 @@ The provider applies a `theme-{name}` CSS class to `document.body` on change.
 
 ### `Sidebar`
 
-The left panel that lists all locations as `SidebarCard` components. Includes a search input that filters locations by area name or condition (frontend-only filter). Contains the `AddLocationForm` for creating new locations.
+The left panel that lists all locations as `SidebarCard` components. Includes a search input that filters locations by area name or condition (frontend-only filter), a **Use my location** action, and the `AddLocationForm` for manual coordinate entry.
 
 ### `Hero`
 
@@ -114,6 +116,7 @@ The frontend communicates with the backend through a thin `fetch` wrapper in `sr
 | --- | --- | --- |
 | `listLocations()` | `GET` | `/api/locations` |
 | `createLocation(payload)` | `POST` | `/api/locations` |
+| `createLocationFromPosition(payload)` | `POST` | `/api/locations/from-position` |
 | `deleteLocation(id)` | `DELETE` | `/api/locations/:id` |
 | `refreshLocation(id)` | `POST` | `/api/locations/:id/refresh` |
 | `logInteraction(event, metadata)` | `POST` | `/api/logs` |

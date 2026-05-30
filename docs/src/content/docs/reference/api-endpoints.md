@@ -67,6 +67,46 @@ Returns the created location object with weather data. If the weather provider f
 
 ---
 
+### `POST /api/locations/from-position`
+
+Create or select a location from browser-derived coordinates. The backend validates that the browser position is inside Singapore, resolves the nearest 2-hour forecast area from data.gov.sg metadata, and saves that forecast area's canonical label coordinate.
+
+**Request Body**
+
+```json
+{ "latitude": 1.3001, "longitude": 103.8001 }
+```
+
+**Validation**
+
+| Rule | Response |
+| --- | --- |
+| Missing lat/lon, non-number values, or numeric strings | `422` `{ "detail": "latitude and longitude are required" }` |
+| Outside Singapore (lat 1.1–1.5, lon 103.6–104.1) | `422` `{ "detail": "Coordinates must be within Singapore..." }` |
+| Forecast-area metadata unavailable | `502` `{ "detail": "Forecast response has no area metadata" }` |
+
+**Response** `201 Created`
+
+```json
+{
+  "location": {
+    "id": 1,
+    "latitude": 1.352,
+    "longitude": 103.849,
+    "created_at": "2026-05-04T12:00:00",
+    "weather": { "condition": "Cloudy", "area": "Bishan", "...": "..." }
+  },
+  "created": true,
+  "matched_area": { "name": "Bishan", "latitude": 1.352, "longitude": 103.849 }
+}
+```
+
+If the matched forecast-area coordinate already exists, the endpoint is idempotent and returns `200 OK` with the existing location and `"created": false`.
+
+If the weather refresh fails after a new canonical area is saved, the endpoint still returns `201 Created` with the saved location and default weather (`condition: "Not refreshed"`).
+
+---
+
 ### `GET /api/locations/:locationId`
 
 Get a single location by ID.
