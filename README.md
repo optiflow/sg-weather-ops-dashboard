@@ -1,5 +1,7 @@
 # Weather Starter
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/optiflow/weather_starter)
+
 A simple TypeScript weather app for agentic coding.
 
 The app tracks Singapore locations and stores their latest weather. It uses a Node/Express backend, a React/Vite frontend, and Portless for a local `.localhost` URL.

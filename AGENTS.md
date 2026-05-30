@@ -35,6 +35,12 @@ Run: `npm test` | Watch: `npm run test:watch`
 Monorepo with npm workspaces: `frontend/`, `backend/`, `docs/`, `scripts/`, `.agents/skills/`.
 See "File Structure" below and `docs/ARCHITECTURE.md` for full layout details.
 
+## External Code Index
+- DeepWiki index: https://deepwiki.com/optiflow/weather_starter
+- Use DeepWiki for orientation, architecture discovery, and broad planning when network or MCP access is available.
+- Treat local files as the source of truth before editing or making final claims.
+- If DeepWiki MCP is available, use `read_wiki_structure`, `read_wiki_contents`, or `ask_question`.
+
 ## Permissions
 - Use least privilege. Treat these categories as the default operating policy.
 

@@ -1,0 +1,20 @@
+{
+  "repo_notes": [
+    {
+      "content": "This repository is a TypeScript Singapore weather app monorepo using npm workspaces. The main workspaces are frontend/ for the React/Vite/Tailwind/Leaflet single-page app, backend/ for the Node.js/Express API with SQLite and Drizzle ORM, docs/ for the Astro Starlight documentation site, and scripts/ for local development orchestration.",
+      "author": "Repository maintainer"
+    },
+    {
+      "content": "DeepWiki should prioritize the interaction between the frontend state/UI, backend /api routes, Singapore data.gov.sg weather client, and SQLite persistence. Important source areas include frontend/src/state/store.tsx, frontend/src/api.ts, frontend/src/components/, backend/src/routes/locations.ts, backend/src/db.ts, backend/src/schema.ts, and backend/src/weather.ts.",
+      "author": "Repository maintainer"
+    },
+    {
+      "content": "Generated, local, or runtime state should not be treated as source-of-truth documentation. Avoid emphasizing frontend/dist/, backend/dist/, backend/weather.db, backend/logs/, .DS_Store files, or local environment files. Source files, tests, docs, and root commands are the authoritative references.",
+      "author": "Repository maintainer"
+    },
+    {
+      "content": "For agent-oriented workflows, document the root npm commands from package.json and docs/COMMANDS.md, the quality gate npm test then npm run build then npm run lint, and the instruction hierarchy in AGENTS.md. The app uses Portless for local development URLs and relative /api requests from the frontend.",
+      "author": "Repository maintainer"
+    }
+  ]
+}
