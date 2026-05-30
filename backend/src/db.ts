@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { and, desc, eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migrate } from 'drizzle-orm/sqlite-proxy/migrator';
 import { locations, type WeatherSnapshot } from './schema.js';
@@ -61,30 +61,27 @@ export async function listLocations(): Promise<LocationRecord[]> {
 }
 
 export async function createLocation(latitude: number, longitude: number): Promise<LocationRecord> {
-  const duplicate = await db
-    .select({ id: locations.id })
-    .from(locations)
-    .where(and(eq(locations.latitude, latitude), eq(locations.longitude, longitude)))
-    .get();
-
-  if (duplicate) {
-    const error = new Error('Location already exists');
-    error.name = 'DuplicateLocationError';
-    throw error;
-  }
-
   const createdAt = new Date().toISOString().slice(0, 19);
   const weather = weatherToColumns(defaultWeather);
-  const row = await db
-    .insert(locations)
-    .values({
-      latitude,
-      longitude,
-      createdAt,
-      ...weather,
-    })
-    .returning()
-    .get();
+  let row: LocationRow;
+
+  try {
+    row = await db
+      .insert(locations)
+      .values({
+        latitude,
+        longitude,
+        createdAt,
+        ...weather,
+      })
+      .returning()
+      .get();
+  } catch (error) {
+    if (isDuplicateLocationConstraintError(error)) {
+      throw createDuplicateLocationError();
+    }
+    throw error;
+  }
 
   return rowToRecord(row);
 }
@@ -111,6 +108,28 @@ export async function resetStore(): Promise<void> {
 
 export async function deleteLocation(id: number): Promise<void> {
   await db.delete(locations).where(eq(locations.id, id)).run();
+}
+
+function createDuplicateLocationError(): Error {
+  const error = new Error('Location already exists');
+  error.name = 'DuplicateLocationError';
+  return error;
+}
+
+function isDuplicateLocationConstraintError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  const sqliteError = error as Error & { code?: unknown };
+  if (
+    sqliteError.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+    error.message.includes('UNIQUE constraint failed: locations.latitude, locations.longitude') ||
+    error.message.includes('locations_latitude_longitude_unique')
+  ) {
+    return true;
+  }
+
+  const causedBy = (error as Error & { cause?: unknown }).cause;
+  return isDuplicateLocationConstraintError(causedBy);
 }
 
 function weatherToColumns(weather: WeatherSnapshot) {

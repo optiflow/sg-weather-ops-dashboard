@@ -45,7 +45,7 @@ List all saved locations, ordered by creation date (newest first).
 
 ### `POST /api/locations`
 
-Create a new location. Coordinates must be within Singapore's bounding box.
+Create a new location. Coordinates must be JSON numbers within Singapore's bounding box.
 
 **Request Body**
 
@@ -57,7 +57,7 @@ Create a new location. Coordinates must be within Singapore's bounding box.
 
 | Rule | Response |
 | --- | --- |
-| Missing or non-numeric lat/lon | `422` `{ "detail": "latitude and longitude are required" }` |
+| Missing lat/lon, non-number values, or numeric strings | `422` `{ "detail": "latitude and longitude are required" }` |
 | Outside Singapore (lat 1.1–1.5, lon 103.6–104.1) | `422` `{ "detail": "Coordinates must be within Singapore..." }` |
 | Duplicate coordinates | `409` `{ "detail": "Location already exists" }` |
 

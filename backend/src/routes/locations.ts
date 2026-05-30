@@ -33,10 +33,11 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
 
   router.post('/locations', async (request, response, next) => {
     try {
-      const latitude = Number(request.body?.latitude);
-      const longitude = Number(request.body?.longitude);
+      const body = request.body as { latitude?: unknown; longitude?: unknown } | undefined;
+      const latitude = body?.latitude;
+      const longitude = body?.longitude;
 
-      if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      if (!isFiniteNumber(latitude) || !isFiniteNumber(longitude)) {
         response.status(422).json({ detail: 'latitude and longitude are required' });
         return;
       }
@@ -113,6 +114,10 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
 
       const snapshot = await weatherClient.getCurrentWeather(location.latitude, location.longitude);
       const updated = await updateWeather(locationId, snapshot);
+      if (!updated) {
+        response.status(404).json({ detail: 'Location not found' });
+        return;
+      }
       response.json(updated);
     } catch (error) {
       if (error instanceof WeatherProviderError) {
@@ -124,4 +129,8 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
   });
 
   return router;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }

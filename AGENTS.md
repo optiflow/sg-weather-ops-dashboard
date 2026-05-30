@@ -3,12 +3,17 @@ name: weather-starter-agent
 description: README for agent
 ver: 18052026
 ---
+# AGENTS.md
+
+## Background
+- Repo for building Singapore weather app.
 
 ## Env setup
 1. `cp .env.example .env` -- set `WEATHER_API_KEY` if higher API rate limits are needed.
 2. For frontend proxy: `cp frontend/.env.local.example frontend/.env.local` and adjust `VITE_BACKEND_PORT`.
 3. `npm install` from repo root (uses npm workspaces; no other package manager).
 4. Full env details: `docs/ARCHITECTURE.md`.
+5. alias agentlink='ln -sf AGENTS.md CLAUDE.md && echo "✅ CLAUDE.md AGENTS.md symlink created"'
 
 ## Cmds
 All commands run from repo root. See "Canonical Commands" below for the full table.
