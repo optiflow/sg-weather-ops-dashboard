@@ -3,7 +3,7 @@ title: Database Schema
 description: SQLite database schema managed by Drizzle ORM.
 ---
 
-Weather Starter uses a single SQLite database managed by [Drizzle ORM](https://orm.drizzle.team). The database file defaults to `backend/weather.db` and uses WAL journal mode.
+Weather Starter uses one SQLite database managed through Drizzle ORM. The database file defaults to `backend/weather.db`, or `DATABASE_PATH` when that environment variable is set. `backend/src/db.ts` opens the database with Node's built-in `DatabaseSync`, enables WAL journal mode, and runs Drizzle migrations during module initialization.
 
 ## Entity Relationship
 
@@ -37,7 +37,7 @@ erDiagram
 
 ## Table: `locations`
 
-Defined in `backend/src/schema.ts` using Drizzle's `sqliteTable` helper.
+`locations` is defined in `backend/src/schema.ts` with Drizzle's `sqliteTable` helper. It combines saved coordinate data and the latest weather snapshot for that coordinate.
 
 ### Columns
 
@@ -70,6 +70,33 @@ Defined in `backend/src/schema.ts` using Drizzle's `sqliteTable` helper.
 
 - **`locations_latitude_longitude_unique`** — Unique index on `(latitude, longitude)` to prevent duplicate locations.
 
+## Default Weather
+
+New rows are inserted with a default snapshot before the backend attempts the initial provider refresh:
+
+| Field | Default |
+| --- | --- |
+| `condition` | `Not refreshed` |
+| `observed_at` | `null` |
+| `source` | `not-refreshed` |
+| Scalar weather metrics | `null` |
+| `forecast_periods` | `[]` |
+| `daily_forecast` | `[]` |
+
+This lets create operations succeed even when the weather provider fails after the location has been saved.
+
+## Data Access Flow
+
+```mermaid
+flowchart TD
+  Route["locations router"] --> Helpers["backend/src/db.ts helpers"]
+  Helpers --> Drizzle["Drizzle sqlite-proxy"]
+  Drizzle --> Callback["sqliteCallback(sql, params, method)"]
+  Callback --> NodeSQLite["node:sqlite DatabaseSync"]
+  NodeSQLite --> File["backend/weather.db or DATABASE_PATH"]
+  Migrations["backend/drizzle migrations"] --> Drizzle
+```
+
 ## Migrations
 
 Migrations are stored in `backend/drizzle/` and run automatically on server startup via `drizzle-orm/sqlite-proxy/migrator`.
@@ -99,6 +126,23 @@ The `backend/src/db.ts` module exports these async functions:
 | `listLocations()` | Returns all locations ordered by newest first |
 | `createLocation(lat, lon)` | Inserts a location with default weather; throws `DuplicateLocationError` on conflict |
 | `getLocation(id)` | Returns a single location or `null` |
+| `getLocationByCoordinates(lat, lon)` | Returns a saved location by exact latitude/longitude pair or `null` |
 | `updateWeather(id, snapshot)` | Updates weather columns for a location |
 | `deleteLocation(id)` | Deletes a location by ID |
 | `resetStore()` | Deletes all locations and resets auto-increment |
+
+## Record Mapping
+
+Rows use Drizzle camelCase property names internally, while API JSON uses snake_case. `rowToRecord()` maps each database row into:
+
+```ts
+interface LocationRecord {
+  id: number;
+  latitude: number;
+  longitude: number;
+  created_at: string;
+  weather: WeatherSnapshot;
+}
+```
+
+`weatherToColumns()` performs the reverse mapping when a refreshed `WeatherSnapshot` is persisted.

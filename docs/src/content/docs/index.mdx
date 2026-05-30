@@ -3,7 +3,7 @@ title: Weather Starter
 description: A full-stack Singapore weather dashboard built with React, Express, and SQLite.
 template: splash
 hero:
-  tagline: A full-stack monorepo for tracking real-time Singapore weather. Built with React, Express, Drizzle ORM, and the data.gov.sg API.
+  tagline: A full-stack monorepo for tracking Singapore weather snapshots. Built with React, Express, SQLite, Drizzle ORM, Astro Starlight, and data.gov.sg weather APIs.
   actions:
     - text: Getting Started
       link: /guides/getting-started/
@@ -18,39 +18,96 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 ## What is Weather Starter?
 
-Weather Starter is an educational full-stack monorepo that pulls real-time weather observations from Singapore's open data APIs. Users save coordinates, and the app fetches forecasts, temperature, humidity, wind, rainfall, air quality, and UV readings for the nearest station.
+Weather Starter is an educational full-stack TypeScript app for saving Singapore coordinates and viewing the latest weather snapshot for each saved location. The backend stores locations in SQLite, refreshes weather from Singapore data.gov.sg endpoints, and exposes a small REST API. The frontend renders the saved locations as an interactive weather dashboard with a sidebar, detail view, forecast strips, metric tiles, theme switching, and a Leaflet map.
+
+The app supports two location workflows:
+
+- Manual coordinate entry for any coordinate inside Singapore's configured bounding box.
+- Browser geolocation through **Use my location**, which resolves the raw browser position to the nearest 2-hour forecast area before storing the canonical forecast-area coordinate.
+
+The docs site itself is an Astro Starlight workspace under `docs/`.
 
 ## Architecture at a Glance
 
 ```mermaid
-graph LR
-  subgraph Browser
-    A["React SPA<br/>(Vite + Tailwind)"]
+flowchart LR
+  subgraph Browser["Browser"]
+    UI["React SPA\nVite + Tailwind"]
+    Store["StoreProvider\nlocations, selectedId, actions"]
+    Theme["ThemeProvider\ntheme class + localStorage"]
+    ApiClient["frontend/src/api.ts\nrelative /api fetch wrapper"]
+    Geo["Geolocation API\nUse my location"]
   end
-  subgraph Server
-    B["Express API"]
-    C["SQLite<br/>(Drizzle ORM)"]
-  end
-  D["data.gov.sg<br/>Weather APIs"]
 
-  A -- "fetch /api/*" --> B
-  B -- "read / write" --> C
-  B -- "HTTP GET" --> D
+  subgraph Dev["Development runtime"]
+    Portless["Portless\nweather-starter.localhost:1355"]
+    Vite["Vite middleware\nserves the React app"]
+  end
+
+  subgraph Server["Express backend"]
+    App["createApp()\nsecurity headers + JSON limit"]
+    Logs["POST /api/logs\nPino frontend events"]
+    Routes["locations router\n/api/locations*"]
+    Weather["SingaporeWeatherClient\nprovider aggregation"]
+  end
+
+  subgraph Persistence["Local persistence"]
+    DbHelpers["backend/src/db.ts\nDrizzle helpers"]
+    SQLite["SQLite\nbackend/weather.db"]
+    Migrations["backend/drizzle\nstartup migrations"]
+  end
+
+  GovOpen["api-open.data.gov.sg\nreal-time weather APIs"]
+  GovLegacy["api.data.gov.sg\n4-day forecast"]
+
+  UI --> Store
+  UI --> Theme
+  UI --> Geo
+  Store --> ApiClient
+  Geo --> Store
+  ApiClient --> Portless
+  Portless --> App
+  App --> Vite
+  App --> Logs
+  App --> Routes
+  Routes --> DbHelpers
+  Routes --> Weather
+  DbHelpers --> SQLite
+  Migrations --> SQLite
+  Weather --> GovOpen
+  Weather --> GovLegacy
 ```
+
+In development, `scripts/dev.mjs` starts `tsx watch backend/src/server.ts` behind Portless. Express owns both the API and the Vite middleware, so the browser can use relative `/api` requests without a separate frontend proxy. In production, the compiled backend serves `frontend/dist` as static files.
 
 ## Key Features
 
 <CardGrid stagger>
-  <Card title="Real-Time Data" icon="sun">
-    Pulls 2-hour forecasts, temperature, humidity, wind, rainfall, UV index, PSI, and PM2.5 from Singapore's open-data APIs.
+  <Card title="Weather Snapshots" icon="sun">
+    Saves one latest snapshot per location, including 2-hour forecast text, station readings, UV, air quality, 24-hour periods, and 4-day outlook.
   </Card>
-  <Card title="Location Tracking" icon="pencil">
-    Save multiple Singapore coordinates. Each location gets its own weather snapshot with nearest-station matching.
+  <Card title="Location Workflows" icon="pencil">
+    Add coordinates manually, use browser geolocation, refresh a saved location, delete a saved location, and search the sidebar locally.
   </Card>
-  <Card title="Apple-Style Dashboard" icon="laptop">
-    Sidebar + hero layout with hourly forecasts, 4-day outlook, interactive Leaflet map, and metric tiles.
+  <Card title="Dashboard UI" icon="laptop">
+    Renders a sidebar, selected-location hero, period forecast strip, 4-day forecast, fullscreen Leaflet map, and weather metric tiles.
   </Card>
-  <Card title="Multiple Themes" icon="setting">
-    Switch between Apple, Cotton Candy, Night City, Pixel, and Terminal visual themes.
+  <Card title="Docs Workspace" icon="setting">
+    Uses Astro Starlight with Mermaid support for architecture, workflow, data pipeline, component tree, and schema diagrams.
   </Card>
 </CardGrid>
+
+## Source Map
+
+The implementation is intentionally small:
+
+| Area | Source |
+| --- | --- |
+| Express app, security headers, Vite/static serving, frontend logging | `backend/src/server.ts` |
+| Location API behavior | `backend/src/routes/locations.ts` |
+| SQLite access and Drizzle migration startup | `backend/src/db.ts` |
+| Drizzle table and persisted weather fields | `backend/src/schema.ts` |
+| data.gov.sg client and provider mapping | `backend/src/weather.ts` |
+| React app shell and dashboard components | `frontend/src/App.tsx`, `frontend/src/components/*` |
+| Frontend API client and shared data contracts | `frontend/src/api.ts`, `frontend/src/types.ts` |
+| Frontend state and theme context | `frontend/src/state/store.tsx`, `frontend/src/state/themeStore.tsx` |

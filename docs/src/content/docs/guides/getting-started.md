@@ -3,90 +3,130 @@ title: Getting Started
 description: Install dependencies and run the Weather Starter development server.
 ---
 
+Weather Starter is an npm workspaces monorepo with three workspaces: `frontend`, `backend`, and `docs`. Run commands from the repository root unless a command explicitly uses `-w docs`, `-w frontend`, or `-w backend`.
+
 ## Prerequisites
 
-- **Node.js** v22 or later (the project uses the built-in `node:sqlite` module)
-- **npm** v10+
+- Node.js v22 or later. The backend uses the built-in `node:sqlite` module through `DatabaseSync`.
+- npm v10 or later. The root `package-lock.json` is the dependency source of truth.
 
-## Clone and Install
+## Install
 
 ```bash
-git clone <repo-url> weather-starter
 cd weather-starter
 npm install
 ```
 
-`npm install` bootstraps all three workspaces — `frontend`, `backend`, and `docs` — in a single step.
+The install bootstraps the React frontend, Express backend, and Astro Starlight docs workspace in one step.
 
-## Start the Dev Server
+## Start the App
 
 ```bash
 npm run dev
 ```
 
-This runs `scripts/dev.mjs`, which starts the Express backend with `tsx watch` behind [Portless](https://github.com/nicepkg/portless). Vite is loaded as Express middleware in development mode, so there is no separate frontend process.
+This runs `scripts/dev.mjs`, which starts:
 
-Once started, open the URL printed to the terminal. By default it is:
+- `portless run --name weather-starter`
+- `tsx watch backend/src/server.ts`
+- Express with Vite loaded as middleware in development mode
+
+The frontend and backend run behind one stable local URL. Open the URL printed by Portless. By default it is:
 
 ```
 http://weather-starter.localhost:1355
 ```
 
-Browser geolocation for **Use my location** should work on `localhost` and `*.localhost` origins. If your browser requires HTTPS for local geolocation, start the app with:
+The browser uses relative `/api` requests, so no frontend proxy is needed in this default flow.
+
+### Geolocation in Development
+
+The **Use my location** button uses the browser Geolocation API. It requires a trusted origin. The app accepts `localhost`, `127.0.0.1`, `[::1]`, and `*.localhost` as local trusted origins when the browser allows them.
+
+If the browser blocks geolocation over HTTP, start the app with HTTPS enabled through Portless:
 
 ```bash
 PORTLESS_HTTPS=1 npm run dev
 ```
 
-If **Use my location** reports that the weather server is unavailable, check that Portless has the app registered:
+### Health Check
+
+If the UI reports that the server is unavailable, verify the backend:
 
 ```bash
 curl http://weather-starter.localhost:1355/health
 ```
 
-The response should be JSON: `{ "status": "healthy" }`. If the request returns Portless HTML or a `No app registered` message, restart `npm run dev`.
+Expected response:
 
-## Environment Variables
+```json
+{ "status": "healthy" }
+```
 
-Create a `.env` file in the project root (one is included by default):
+If the response is Portless HTML or says no app is registered, restart `npm run dev`.
+
+## Environment
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `WEATHER_API_KEY` | _(empty)_ | Optional data.gov.sg API key for higher rate limits |
-| `PORTLESS_PORT` | `1355` | Local port used by Portless |
-| `PORTLESS_HTTPS` | `0` | Set to `1` for local HTTPS |
-| `DATABASE_PATH` | `backend/weather.db` | Path to the SQLite database file |
+| `WEATHER_API_KEY` | empty | Optional data.gov.sg API key. Sent as `x-api-key` by `SingaporeWeatherClient` when set. |
+| `PORTLESS_PORT` | `1355` | Stable local Portless port used by `scripts/dev.mjs`. |
+| `PORTLESS_HTTPS` | `0` | Set to `1` for local HTTPS. |
+| `DATABASE_PATH` | `backend/weather.db` | SQLite database path used by `backend/src/db.ts`. |
+| `LOG_LEVEL` | `info` in app runtime, `silent` in tests | Pino log level. |
+| `LOG_FILE_PATH` | `backend/logs/app.log` | File destination for backend logs outside tests. |
 
-The app works without an API key for light local usage.
+Copy `.env.example` to `.env` when you want local overrides. The app works without a weather API key for light local usage.
 
-## Run Tests
+The repository also includes `frontend/.env.local.example` for a standalone Vite frontend proxy workflow, but the normal root `npm run dev` path serves Vite through Express and does not require it.
+
+## Useful Commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Starts the full app in development through Portless. |
+| `npm run build` | Builds the frontend and type-checks the backend. |
+| `npm run start` | Runs the compiled production server from `backend/dist/server.js`. |
+| `npm test` | Runs Vitest and Supertest backend tests. |
+| `npm run lint` | Runs Biome checks. |
+| `npm run format` | Formats with Biome. |
+| `npm run doctor` | Runs local diagnostics. |
+| `npm run reset` | Resets local state such as the SQLite database. |
+| `npm run db:generate` | Generates Drizzle migrations after schema changes. |
+| `npm run db:migrate` | Applies Drizzle migrations. |
+| `npm run docs` | Starts the Astro Starlight docs site. |
+
+## Tests and Quality Gate
+
+Run the focused docs build after editing documentation:
+
+```bash
+npm run build -w docs
+```
+
+Before completing a code or documentation task, run the root quality gate:
 
 ```bash
 npm test
+npm run build
+npm run lint
 ```
 
-Tests use Vitest with Supertest. The test suite creates a temporary SQLite database and injects a mock weather client so no network calls are made.
+Tests create a temporary SQLite database and inject a mock weather client, so they do not call data.gov.sg.
 
-## Lint and Format
-
-```bash
-npm run lint      # Biome check
-npm run format    # Biome format
-```
-
-## Build for Production
+## Production Build
 
 ```bash
 npm run build
-npm start
+npm run start
 ```
 
-`npm run build` compiles the React frontend with Vite and type-checks the backend with `tsc`. `npm start` serves the built frontend as static files from Express.
+`npm run build` runs the frontend workspace build and `tsc -p backend/tsconfig.json`. `npm run start` sets `NODE_ENV=production` and starts `backend/dist/server.js`. In production mode, Express serves `frontend/dist` as static files and falls back to `index.html` for the SPA.
 
-## Run the Docs Site
+## Docs Site
 
 ```bash
 npm run docs
 ```
 
-Starts the Astro Starlight documentation site at `http://localhost:4321`.
+This delegates to `npm run dev -w docs` and starts the Astro Starlight development server, normally at `http://localhost:4321`.
