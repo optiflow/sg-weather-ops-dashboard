@@ -38,6 +38,14 @@ Browser geolocation for **Use my location** should work on `localhost` and `*.lo
 PORTLESS_HTTPS=1 npm run dev
 ```
 
+If **Use my location** reports that the weather server is unavailable, check that Portless has the app registered:
+
+```bash
+curl http://weather-starter.localhost:1355/health
+```
+
+The response should be JSON: `{ "status": "healthy" }`. If the request returns Portless HTML or a `No app registered` message, restart `npm run dev`.
+
 ## Environment Variables
 
 Create a `.env` file in the project root (one is included by default):

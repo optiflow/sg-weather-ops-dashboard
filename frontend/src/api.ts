@@ -10,16 +10,31 @@ interface ApiError {
   detail?: string;
 }
 
+const SERVER_UNAVAILABLE_MESSAGE = 'Weather server is not available. Restart npm run dev.';
+
+function isJsonResponse(response: Response) {
+  const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
+  return contentType.includes('application/json') || contentType.includes('+json');
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+  }).catch(() => {
+    throw new Error(SERVER_UNAVAILABLE_MESSAGE);
   });
   if (!response.ok) {
+    if (!isJsonResponse(response)) {
+      throw new Error(SERVER_UNAVAILABLE_MESSAGE);
+    }
     const error = (await response.json().catch(() => ({}))) as ApiError;
     throw new Error(error.detail || 'Request failed');
   }
   if (response.status === 204) return null as T;
+  if (!isJsonResponse(response)) {
+    throw new Error(SERVER_UNAVAILABLE_MESSAGE);
+  }
   return (await response.json()) as T;
 }
 
