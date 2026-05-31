@@ -5,6 +5,8 @@ import mermaid from 'astro-mermaid';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://optiflow.github.io',
+  base: '/weather_starter',
   integrations: [
     starlight({
       title: 'Weather Starter',
