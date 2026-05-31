@@ -33,6 +33,7 @@ Read only the references needed for the task:
 - `docs/THEMES.md` - visual and theme guidance for styling changes.
 - `docs/src/content/docs/reference/api-endpoints.md` - API behavior and response contracts.
 - `docs/src/content/docs/reference/database-schema.md` - database schema and Drizzle mapping.
+- `llms.txt` - curated orientation guide for LLM and agent readers.
 - Relevant skill files under `.agents/skills/` when the task matches their description.
 
 Treat local files as the source of truth before editing or making final claims.
@@ -60,11 +61,7 @@ npm run dev
 
 Environment setup is documented in `docs/src/content/docs/reference/configuration.md`. The app works without `WEATHER_API_KEY` for light local usage. Use `.env` and `.env.local` files only for local configuration; never print or commit their contents.
 
-Optional compatibility helper for tools that read `CLAUDE.md`:
-
-```bash
-alias agentlink='ln -sf AGENTS.md CLAUDE.md && echo "CLAUDE.md -> AGENTS.md symlink created"'
-```
+`CLAUDE.md` is a compatibility symlink to `AGENTS.md` for tools that read that file.
 
 ## Canonical Commands
 
@@ -74,7 +71,7 @@ Run commands from the repository root.
 | --- | --- |
 | `npm run dev` | Start Express and Vite middleware through Portless. |
 | `npm run start` | Run the compiled production server. |
-| `npm run docs` | Start the Astro Starlight docs site. |
+| `npm run docs` | Start the Astro Starlight docs site at `http://localhost:4321`. |
 | `npm test` | Run Vitest and Supertest tests. |
 | `npm run test:watch` | Run tests in watch mode. |
 | `npm run build` | Build frontend and compile backend TypeScript. |
@@ -178,7 +175,11 @@ Use skills when the task clearly matches their description. Read only the needed
 
 ## Skills And Sub-Agents
 
-Create a new skill when a task is repeated more than twice, a workflow has more than three ordered steps, or a reusable project-specific pattern is too detailed for this file.
+Create a new skill when one of these is true:
+
+- A task is repeated more than twice.
+- A workflow has more than three ordered steps.
+- A reusable project pattern is too detailed for this file.
 
 Store project skills at:
 

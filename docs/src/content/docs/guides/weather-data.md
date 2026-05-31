@@ -71,7 +71,9 @@ Only stations that have a value in the latest reading are considered.
 
 ## Region Matching
 
-Region-based readings (PSI, PM2.5, 24-hour forecast) use five fixed Singapore regions: `west`, `north`, `central`, `south`, `east`. The client picks the nearest region to the user's coordinate and reads that region's value.
+Air-quality readings use the region metadata returned by the PSI provider. The client picks the nearest provider region and reads PSI and PM2.5 values for that region.
+
+The 24-hour forecast uses five fixed Singapore regions: `west`, `north`, `central`, `south`, `east`. The client picks the nearest fixed region and reads that region's period forecast.
 
 ## Snapshot Shape
 
@@ -111,7 +113,7 @@ The route behavior depends on where the failure occurs:
 | Manual create | Keeps the new location with default weather and returns `201`. |
 | Browser-position create before area matching | Does not create a location and returns `502`. |
 | Browser-position create after saving matched area | Keeps the new canonical location with default weather and returns `201`. |
-| Manual refresh | Returns `502` and leaves the previous snapshot in place. |
+| Manual refresh | Persists partial or `Unavailable` snapshots for settled endpoint failures. Returns `502` only when the weather client rejects outside that settled endpoint flow. |
 
 ## Rendering Data
 

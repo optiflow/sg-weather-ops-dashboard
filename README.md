@@ -4,7 +4,7 @@
 
 Weather Starter is a full-stack TypeScript app for saving Singapore locations and viewing the latest local weather snapshot for each one. It is built as an npm workspaces monorepo with a React/Vite dashboard, an Express API, SQLite persistence through Drizzle ORM, and Singapore data.gov.sg weather endpoints.
 
-The project is intentionally small enough to study end to end, but complete enough to exercise real full-stack workflows: location creation, browser geolocation, API validation, provider aggregation, persistence, refresh behavior, frontend state, responsive dashboard UI, and local documentation.
+The project is small enough to study end to end. It still covers real full-stack work: location creation, browser geolocation, API validation, weather aggregation, SQLite persistence, refresh behavior, frontend state, responsive UI, and local docs.
 
 ## Quick Start
 
@@ -31,6 +31,8 @@ Start the docs site:
 ```bash
 npm run docs
 ```
+
+Open `http://localhost:4321` or the URL printed by Astro.
 
 Before finishing changes, run the root quality gate:
 
@@ -85,6 +87,7 @@ Run commands from the repository root.
 | `npm run dev` | Start the full app through Portless. |
 | `npm run docs` | Start the Astro Starlight docs site. |
 | `npm test` | Run Vitest and Supertest backend tests. |
+| `npm run test:watch` | Run tests in watch mode. |
 | `npm run build` | Build the frontend and compile backend TypeScript. |
 | `npm run lint` | Run Biome checks. |
 | `npm run format` | Format the repo with Biome. |
@@ -121,6 +124,7 @@ weather-starter/
 |-- scripts/        # Dev, start, doctor, and reset orchestration
 |-- .agents/        # Repo-local agent skills and code-review role
 |-- AGENTS.md       # Agent operating contract for this repo
+|-- llms.txt        # Curated guide for LLM and agent readers
 |-- package.json    # Root npm workspace scripts
 `-- package-lock.json
 ```
@@ -134,6 +138,7 @@ Start with these docs when you need more detail:
 - [Frontend components](docs/src/content/docs/reference/frontend-components.md)
 - [TypeScript conventions](docs/TYPESCRIPT.md)
 - [Theme guidance](docs/THEMES.md)
+- [LLM guide](llms.txt)
 
 ## External Weather Data
 
@@ -146,8 +151,8 @@ npm run dev
 
 The weather client aggregates 2-hour forecast data, realtime station readings, UV, air quality, 24-hour forecast periods, and the 4-day outlook. Provider details live in [Weather Data](docs/src/content/docs/guides/weather-data.md).
 
-## Roadmap
+## Future Ideas
 
-- Singapore forecast-area picker to replace manual latitude/longitude entry.
+- Forecast-area picker for the manual add flow.
 - Historical readings and charts instead of one latest snapshot per location.
-- Multi-location management with sorting, primary location selection, and mobile-friendly controls.
+- Sorting, primary location selection, and stronger mobile controls for saved locations.

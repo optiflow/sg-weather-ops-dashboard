@@ -27,8 +27,8 @@ Defined in the root `package.json`:
 | `build` | `npm run build -w frontend && tsc -p backend/tsconfig.json` | Build both workspaces |
 | `start` | `node scripts/start.mjs` | Start production server |
 | `docs` | `npm run dev -w docs` | Start Starlight docs site |
-| `test` | `vitest run` | Run test suite |
-| `test:watch` | `vitest` | Run tests in watch mode |
+| `test` | `NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest run` | Run test suite |
+| `test:watch` | `NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest` | Run tests in watch mode |
 | `lint` | `biome check .` | Lint and format check with Biome |
 | `format` | `biome format --write .` | Format with Biome |
 | `db:generate` | `drizzle-kit generate` | Generate Drizzle migrations |
@@ -57,7 +57,7 @@ Three separate `tsconfig.json` files:
 | File | Target | Notes |
 | --- | --- | --- |
 | `frontend/tsconfig.json` | DOM + ESNext | Used by Vite for the React SPA |
-| `backend/tsconfig.json` | Node ESNext | Emits to `backend/dist/` |
+| `backend/tsconfig.json` | ES2022 with NodeNext | Emits to `backend/dist/` |
 | `docs/tsconfig.json` | Astro strict | Extends `astro/tsconfigs/strict` |
 
 The backend uses `tsx` for development (no compile step needed), and `tsc` only for the production build.
@@ -134,6 +134,7 @@ Browser geolocation is expected to work on `localhost` and `*.localhost` local o
 | `PORT` | `backend/src/server.ts` | Direct Express listen port when running the compiled server manually. |
 | `PORTLESS_PORT` | `scripts/dev.mjs` | Stable local Portless port. |
 | `PORTLESS_HTTPS` | `scripts/dev.mjs` | Enables local HTTPS through Portless when set to `1`. |
+| `WEATHER_STARTER_URL` | `scripts/doctor.mjs` | Base URL checked by `npm run doctor`; defaults to `http://127.0.0.1:3000`. |
 
 ## Runtime Modes
 

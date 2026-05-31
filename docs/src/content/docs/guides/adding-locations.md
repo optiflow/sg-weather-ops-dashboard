@@ -16,7 +16,7 @@ Coordinates must be JSON numbers. Numeric strings such as `"1.35"` are rejected.
 
 ## Manual Coordinates
 
-1. Click the **+** button in the sidebar.
+1. Click **Add Location** in the sidebar.
 2. Enter a Singapore latitude and longitude.
 3. Submit the form. The frontend calls `POST /api/locations`.
 
@@ -118,7 +118,7 @@ If **Use my location** reports that the weather server is unavailable or shows a
 
 ### Idempotent Forecast-Area Creates
 
-Browser-derived locations are canonicalized to the matched forecast-area coordinate. If two browser positions resolve to the same forecast-area label coordinate, the second request returns the existing saved location with:
+Browser-derived locations are canonicalized to the matched forecast-area coordinate. If two browser positions resolve to the same forecast-area label coordinate, the second request returns the existing saved location and includes:
 
 ```json
 { "created": false }
@@ -135,7 +135,7 @@ Click the **Refresh** button on a location's detail view. This calls `POST /api/
 3. Updates the weather columns in the database.
 4. Returns the updated location.
 
-If the weather provider is unreachable or rate-limited, the endpoint returns `502 Bad Gateway`.
+Individual provider failures can still produce a partial or `Unavailable` snapshot. If the weather client rejects outside that settled endpoint flow, the endpoint returns `502 Bad Gateway`.
 
 ## Deleting a Location
 
@@ -162,6 +162,6 @@ The sidebar search box filters the list by area name or weather condition. This 
 | `isAdding` | Whether the manual coordinate form is visible. |
 | `isLoading` | Initial list load state. |
 | `refreshingId` | Location currently being refreshed. |
-| `error` | Last API or geolocation error. |
+| `error` | Last store or API error. Geolocation status is local to `UseMyLocationButton`. |
 
 Every create, browser-position create, refresh, and delete action logs a frontend event to `POST /api/logs`. Logging failures are intentionally ignored by the UI.

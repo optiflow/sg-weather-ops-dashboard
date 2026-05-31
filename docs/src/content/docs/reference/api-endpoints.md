@@ -153,15 +153,17 @@ Refresh weather data for a location by fetching from all data.gov.sg endpoints.
 
 **Response** `200 OK` — Returns the updated location object.
 
+Per-endpoint provider failures are settled inside the weather client. The endpoint can still return `200 OK` with a partial snapshot or an `Unavailable` base snapshot when individual provider calls fail.
+
 **Errors**
 
 | Status | Body |
 | --- | --- |
 | `404` | `{ "detail": "Location not found" }` |
-| `502` | Provider error detail, such as rate limit or unreachable provider. |
+| `502` | Weather-client rejection detail. This is for failures that escape the settled per-endpoint flow. |
 
 ```json
-{ "detail": "Weather provider rate limit reached (HTTP 429)" }
+{ "detail": "Forecast response has no items" }
 ```
 
 ---
