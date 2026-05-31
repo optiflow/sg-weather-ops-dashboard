@@ -59,13 +59,6 @@ Weather Starter is an educational full-stack TypeScript app for saving Singapore
   </div>
 </div>
 
-```mermaid
-flowchart LR
-  Browser["Browser dashboard\nReact + Vite"] --> API["Express API\n/api/locations"]
-  API --> SQLite["SQLite snapshot\nlatest weather per location"]
-  API --> Gov["data.gov.sg\nweather APIs"]
-```
-
 The development runtime serves the dashboard and API from one Portless URL, so browser code can use relative `/api` requests. Production builds compile the dashboard and let Express serve `frontend/dist`.
 
 ## Choose a Path
