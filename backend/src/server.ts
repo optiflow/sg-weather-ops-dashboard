@@ -10,6 +10,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;
 const FRONTEND_EVENT_PATTERN = /^[a-z][a-z0-9_.:-]{1,63}$/;
 
+// In-memory rate limiting state
+const rateLimitMap = new Map<string, number>();
+setInterval(() => rateLimitMap.clear(), 60000).unref(); // Clear every minute
+
 interface AppOptions {
   serveFrontend?: boolean;
   enableRequestLogging?: boolean;
@@ -18,6 +22,7 @@ interface AppOptions {
 
 export async function createApp(options: AppOptions = {}) {
   const app = express();
+  app.set('trust proxy', 1); // Trust first proxy for correct IP resolution
   const serveFrontend = options.serveFrontend ?? process.env.NODE_ENV !== 'test';
   const enableRequestLogging = options.enableRequestLogging ?? process.env.NODE_ENV !== 'test';
 
@@ -45,6 +50,25 @@ export async function createApp(options: AppOptions = {}) {
 
   app.get('/health', (_request, response) => {
     response.json({ status: 'healthy' });
+  });
+
+  app.use('/api', (request, response, next) => {
+    // Security enhancement: Basic native rate limiting to prevent abuse
+    if (process.env.NODE_ENV === 'test') {
+      next();
+      return;
+    }
+
+    const ip = request.ip || request.socket.remoteAddress || 'unknown';
+    const count = (rateLimitMap.get(ip) || 0) + 1;
+    rateLimitMap.set(ip, count);
+
+    if (count > 100) {
+      // Max 100 requests per minute per IP
+      response.status(429).json({ detail: 'Too many requests, please try again later.' });
+      return;
+    }
+    next();
   });
 
   app.post('/api/logs', (request, response) => {
