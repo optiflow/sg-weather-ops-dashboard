@@ -187,30 +187,37 @@ export class SingaporeWeatherClient {
   ) {}
 
   async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot> {
-    const settle = async <T>(promise: Promise<T>) => {
-      try {
-        const value = await promise;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return { status: 'fulfilled' as const, value };
-      } catch (reason) {
-        return { status: 'rejected' as const, reason };
-      }
+    const stagger = <T>(promiseFn: () => Promise<T>, delayMs: number) => {
+      return new Promise<T>((resolve) => setTimeout(() => resolve(promiseFn()), delayMs))
+        .then((value) => ({ status: 'fulfilled' as const, value }))
+        .catch((reason) => ({ status: 'rejected' as const, reason }));
     };
 
-    const forecastPayload = await settle(this.fetchLatestForecastPayload());
-    const airTemp = await settle(this.fetchNearestReading('air-temperature', latitude, longitude));
-    const relativeHumidity = await settle(
-      this.fetchNearestReading('relative-humidity', latitude, longitude),
-    );
-    const rainfall = await settle(this.fetchNearestReading('rainfall', latitude, longitude));
-    const windSpeed = await settle(this.fetchNearestReading('wind-speed', latitude, longitude));
-    const windDirection = await settle(
-      this.fetchNearestReading('wind-direction', latitude, longitude),
-    );
-    const uvIndex = await settle(this.fetchUvIndex());
-    const airQuality = await settle(this.fetchAirQuality(latitude, longitude));
-    const twentyFourHour = await settle(this.fetchTwentyFourHourForecast(latitude, longitude));
-    const fourDay = await settle(this.fetchFourDayForecast());
+    const tasks = [
+      stagger(() => this.fetchLatestForecastPayload(), 0),
+      stagger(() => this.fetchNearestReading('air-temperature', latitude, longitude), 200),
+      stagger(() => this.fetchNearestReading('relative-humidity', latitude, longitude), 400),
+      stagger(() => this.fetchNearestReading('rainfall', latitude, longitude), 600),
+      stagger(() => this.fetchNearestReading('wind-speed', latitude, longitude), 800),
+      stagger(() => this.fetchNearestReading('wind-direction', latitude, longitude), 1000),
+      stagger(() => this.fetchUvIndex(), 1200),
+      stagger(() => this.fetchAirQuality(latitude, longitude), 1400),
+      stagger(() => this.fetchTwentyFourHourForecast(latitude, longitude), 1600),
+      stagger(() => this.fetchFourDayForecast(), 1800),
+    ] as const;
+
+    const [
+      forecastPayload,
+      airTemp,
+      relativeHumidity,
+      rainfall,
+      windSpeed,
+      windDirection,
+      uvIndex,
+      airQuality,
+      twentyFourHour,
+      fourDay,
+    ] = await Promise.all(tasks);
 
     const snapshot =
       forecastPayload.status === 'fulfilled'

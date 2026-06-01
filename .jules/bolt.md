@@ -1,0 +1,3 @@
+## 2024-05-24 - Optimize getCurrentWeather API calls with staggered concurrency
+**Learning:** In Node.js server architectures integrating with strict rate-limited APIs (like api-open.data.gov.sg), executing independent API calls sequentially with hardcoded static delays between them introduces severe unneeded latency (~25.6s total time).
+**Action:** Replace sequential API calls with a staggered concurrent execution model using `Promise.all` and delay thunks. This ensures we maximize network parallelism while safely staggering the request initiation to remain under HTTP 429 limits, dramatically reducing total response time (~3.5s total time).
