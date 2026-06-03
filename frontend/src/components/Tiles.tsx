@@ -82,7 +82,7 @@ export function AirQualityTile({ weather }: WeatherProps) {
     <TileShell
       icon={<CloudIcon className="h-3.5 w-3.5" />}
       title="Air Quality"
-      className="col-span-2"
+      className="sm:col-span-2"
     >
       <div className="text-4xl font-light leading-none text-white/95">{psi}</div>
       <div className="mt-1 text-base text-white/85">
@@ -107,7 +107,7 @@ export function WindTile({ weather }: WeatherProps) {
   const hasDirection = isFiniteNumber(weather?.wind_direction_degrees);
 
   return (
-    <TileShell icon={<WindIcon />} title="Wind" className="col-span-2">
+    <TileShell icon={<WindIcon />} title="Wind" className="sm:col-span-2">
       <div className="grid grid-cols-[1fr_auto] items-center gap-4">
         <ul className="space-y-2 text-sm">
           <li
@@ -246,7 +246,7 @@ export function AveragesTile({ weather }: WeatherProps) {
 
 export function TileGrid({ weather }: WeatherProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <AirQualityTile weather={weather} />
       <WindTile weather={weather} />
       <UVTile weather={weather} />

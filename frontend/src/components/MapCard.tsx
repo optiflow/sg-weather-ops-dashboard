@@ -36,6 +36,15 @@ export function MapCard() {
   const { locations } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isFullscreen]);
+
   const center: [number, number] =
     locations.length > 0 ? [locations[0].latitude, locations[0].longitude] : [1.3521, 103.8198];
 
@@ -70,13 +79,14 @@ export function MapCard() {
   if (isFullscreen) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-xl animate-in fade-in duration-200">
-        <header className="absolute top-0 z-[60] flex w-full items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+        <header className="pointer-events-none absolute top-0 z-[1000] flex w-full items-center justify-between bg-gradient-to-b from-black/80 to-transparent p-4">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80 pointer-events-auto">
             <LocationIcon className="h-3 w-3" />
             <span>Map Overview</span>
           </div>
           <button
             type="button"
+            aria-label="Close map"
             onClick={() => setIsFullscreen(false)}
             className="pointer-events-auto rounded-full bg-white/10 p-2 text-white/80 hover:bg-white/20 backdrop-blur-md transition-colors"
           >
@@ -98,18 +108,19 @@ export function MapCard() {
   }
 
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: non-interactive element used for layout clicking
-    // biome-ignore lint/a11y/noStaticElementInteractions: non-interactive element used for layout clicking
-    <section
-      className="group relative flex flex-col gap-3 rounded-2xl border border-white/15 bg-white/[0.08] p-4 backdrop-blur-xl cursor-pointer hover:bg-white/[0.12] transition-colors overflow-hidden"
-      onClick={() => setIsFullscreen(true)}
-    >
+    <section className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] p-4 backdrop-blur-xl transition-colors hover:bg-white/[0.12]">
       <header className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
         <div className="flex items-center gap-1.5">
           <LocationIcon className="h-3.5 w-3.5" />
           <span>Map Overview</span>
         </div>
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity">Expand</span>
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(true)}
+          className="rounded-full border border-white/15 bg-white/[0.08] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/[0.16] hover:text-white"
+        >
+          Expand map
+        </button>
       </header>
 
       <div className="relative h-48 w-full rounded-xl overflow-hidden shadow-inner border border-white/10 pointer-events-none">

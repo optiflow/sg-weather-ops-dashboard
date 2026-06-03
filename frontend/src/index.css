@@ -12,6 +12,13 @@ body,
 
 body {
   @apply text-white antialiased;
+  --focus-ring: rgba(255, 255, 255, 0.42);
+  --status-error-bg: rgba(239, 68, 68, 0.16);
+  --status-error-border: rgba(252, 165, 165, 0.34);
+  --status-error-text: #fee2e2;
+  --status-success-bg: rgba(16, 185, 129, 0.16);
+  --status-success-border: rgba(110, 231, 183, 0.34);
+  --status-success-text: #d1fae5;
   background-attachment: fixed;
   background-repeat: no-repeat;
   transition:
@@ -33,6 +40,13 @@ body.theme-apple {
    Theme: Cotton Candy (Pastel Dream)
    ---------------------------------- */
 body.theme-cotton-candy {
+  --focus-ring: rgba(51, 65, 85, 0.38);
+  --status-error-bg: rgba(254, 226, 226, 0.88);
+  --status-error-border: rgba(220, 38, 38, 0.36);
+  --status-error-text: #991b1b;
+  --status-success-bg: rgba(209, 250, 229, 0.88);
+  --status-success-border: rgba(5, 150, 105, 0.36);
+  --status-success-text: #065f46;
   background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
   font-family: "Quicksand", sans-serif;
 }
@@ -52,6 +66,7 @@ body.theme-cotton-candy [class*="bg-white/"] {
    Theme: Night City (Cyberpunk Neon)
    ---------------------------------- */
 body.theme-night-city {
+  --focus-ring: rgba(217, 70, 239, 0.55);
   background: #09090b;
   font-family: "Orbitron", sans-serif;
 }
@@ -75,6 +90,7 @@ body.theme-night-city [class*="bg-white/"] {
    Theme: Pixel (Retro 8-bit)
    ---------------------------------- */
 body.theme-pixel {
+  --focus-ring: rgba(0, 0, 0, 0.75);
   background: #2563eb;
   font-family: "Press Start 2P", monospace;
   font-size: 0.75rem; /* Pixel fonts are inherently large */
@@ -97,6 +113,13 @@ body.theme-pixel [class*="bg-white/"] {
    Theme: Terminal (CLI Weather)
    ---------------------------------- */
 body.theme-terminal {
+  --focus-ring: rgba(74, 222, 128, 0.65);
+  --status-error-bg: rgba(127, 29, 29, 0.22);
+  --status-error-border: rgba(248, 113, 113, 0.55);
+  --status-error-text: #fca5a5;
+  --status-success-bg: rgba(20, 83, 45, 0.24);
+  --status-success-border: rgba(74, 222, 128, 0.55);
+  --status-success-text: #86efac;
   background: #000000;
   font-family: "Fira Code", monospace;
 }
@@ -113,13 +136,36 @@ body.theme-terminal [class*="bg-white/"] {
 }
 
 button,
-input {
+input,
+select {
   @apply transition;
 }
 
 button:focus-visible,
-input:focus-visible {
-  @apply outline-none ring-2 ring-white/40 ring-offset-0;
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.status-message {
+  border: 1px solid;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.status-message-error {
+  background: var(--status-error-bg);
+  border-color: var(--status-error-border);
+  color: var(--status-error-text);
+}
+
+.status-message-success {
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
 }
 
 ::-webkit-scrollbar {

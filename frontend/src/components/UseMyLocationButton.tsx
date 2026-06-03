@@ -49,10 +49,8 @@ export function UseMyLocationButton() {
       {status && (
         <p
           aria-live="polite"
-          className={`rounded-md border px-2.5 py-1.5 text-xs ${
-            status.type === 'error'
-              ? 'border-red-300/30 bg-red-500/15 text-red-100'
-              : 'border-emerald-300/30 bg-emerald-500/15 text-emerald-100'
+          className={`status-message ${
+            status.type === 'error' ? 'status-message-error' : 'status-message-success'
           }`}
         >
           {status.message}

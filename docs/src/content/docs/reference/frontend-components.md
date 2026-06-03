@@ -114,7 +114,7 @@ Displays `daily_forecast` as a vertical list with daily high/low temperatures an
 
 ### `MapCard`
 
-An interactive Leaflet map showing all saved locations as markers. The normal card disables dragging and scroll zoom; clicking the card opens a fullscreen map. `MapBoundsUpdater` fits the map bounds to all saved locations with `useEffect`.
+An interactive Leaflet map showing all saved locations as markers. The normal card disables dragging and scroll zoom; an **Expand map** button opens a fullscreen map, which can be closed with the close button or Escape. `MapBoundsUpdater` fits the map bounds to all saved locations with `useEffect`.
 
 ### `TileGrid`
 

@@ -12,7 +12,7 @@ export function Hero() {
 
   if (!selected) {
     return (
-      <main className="flex flex-1 flex-col p-10">
+      <main className="flex min-w-0 flex-1 flex-col p-6 pt-16 md:p-10">
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <p className="text-2xl font-light text-white/85">Select a location</p>
@@ -38,17 +38,17 @@ export function Hero() {
   const low = formatTemperature(selected.weather?.forecast_low_c);
 
   return (
-    <main className="flex-1 overflow-y-auto">
-      <div className="mx-auto flex max-w-5xl flex-col gap-3 p-6 lg:p-8">
-        <header className="flex flex-col items-center pt-6 pb-2 text-center">
+    <main className="min-w-0 flex-1 overflow-y-auto">
+      <div className="mx-auto flex max-w-5xl flex-col gap-3 p-4 pt-14 sm:p-6 md:pt-6 lg:p-8">
+        <header className="flex flex-col items-center pb-2 pt-4 text-center md:pt-6">
           {isHome && (
             <div className="mb-2 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
               <LocationIcon className="h-3 w-3" />
               <span>Home</span>
             </div>
           )}
-          <h1 className="text-4xl font-light leading-tight text-white">{area}</h1>
-          <div className="mt-2 text-[6.5rem] font-extralight leading-none tracking-tight text-white">
+          <h1 className="text-3xl font-light leading-tight text-white sm:text-4xl">{area}</h1>
+          <div className="mt-2 text-6xl font-extralight leading-none tracking-tight text-white sm:text-[6.5rem]">
             {temperature}
           </div>
           <div className="mt-1 text-lg text-white/90">{condition}</div>

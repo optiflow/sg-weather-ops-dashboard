@@ -95,11 +95,7 @@ export function AddLocationForm() {
           {submitting ? 'Adding…' : 'Add'}
         </button>
       </div>
-      {submitError && (
-        <p className="rounded-md border border-red-300/30 bg-red-500/15 px-2.5 py-1.5 text-xs text-red-100">
-          {submitError}
-        </p>
-      )}
+      {submitError && <p className="status-message status-message-error">{submitError}</p>}
     </form>
   );
 }

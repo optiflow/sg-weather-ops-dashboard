@@ -5,9 +5,15 @@ import { SearchIcon } from './icons';
 import { SidebarCard } from './SidebarCard';
 import { UseMyLocationButton } from './UseMyLocationButton';
 
+function errorMessage(error: unknown): string {
+  if (!error) return '';
+  return error instanceof Error ? error.message : 'Weather data could not be updated.';
+}
+
 export function Sidebar() {
-  const { locations, isLoading } = useStore();
+  const { locations, isLoading, error } = useStore();
   const [query, setQuery] = useState('');
+  const message = errorMessage(error);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -20,7 +26,7 @@ export function Sidebar() {
   }, [locations, query]);
 
   return (
-    <aside className="flex min-h-0 w-[22rem] shrink-0 flex-col gap-3 border-r border-white/5 bg-black/20 p-4 backdrop-blur-2xl">
+    <aside className="flex max-h-[62vh] w-full shrink-0 flex-col gap-3 border-b border-white/5 bg-black/20 p-4 pt-16 backdrop-blur-2xl md:h-full md:max-h-none md:min-h-0 md:w-[22rem] md:border-b-0 md:border-r md:pt-4">
       <div className="relative">
         <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
         <input
@@ -34,6 +40,11 @@ export function Sidebar() {
 
       <UseMyLocationButton />
       <AddLocationForm />
+      {message && (
+        <p className="status-message status-message-error" aria-live="polite">
+          {message}
+        </p>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
         {isLoading && locations.length === 0 ? (
