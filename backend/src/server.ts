@@ -10,6 +10,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;
 const FRONTEND_EVENT_PATTERN = /^[a-z][a-z0-9_.:-]{1,63}$/;
 
+// Rate limiting state
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_REQUESTS = 100;
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, info] of rateLimitMap.entries()) {
+    if (now > info.resetTime) {
+      rateLimitMap.delete(ip);
+    }
+  }
+}, 60 * 1000).unref();
+
 interface AppOptions {
   serveFrontend?: boolean;
   enableRequestLogging?: boolean;
@@ -18,6 +32,9 @@ interface AppOptions {
 
 export async function createApp(options: AppOptions = {}) {
   const app = express();
+
+  app.set('trust proxy', 1);
+
   const serveFrontend = options.serveFrontend ?? process.env.NODE_ENV !== 'test';
   const enableRequestLogging = options.enableRequestLogging ?? process.env.NODE_ENV !== 'test';
 
@@ -46,6 +63,33 @@ export async function createApp(options: AppOptions = {}) {
   app.get('/health', (_request, response) => {
     response.json({ status: 'healthy' });
   });
+
+  const apiRateLimiter: express.RequestHandler = (request, response, next) => {
+    if (process.env.NODE_ENV === 'test') {
+      next();
+      return;
+    }
+
+    const ip = request.ip || 'unknown';
+    const now = Date.now();
+    let info = rateLimitMap.get(ip);
+
+    if (!info || now > info.resetTime) {
+      info = { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
+    }
+
+    info.count++;
+    rateLimitMap.set(ip, info);
+
+    if (info.count > MAX_REQUESTS) {
+      response.status(429).json({ detail: 'Too Many Requests' });
+      return;
+    }
+
+    next();
+  };
+
+  app.use('/api', apiRateLimiter);
 
   app.post('/api/logs', (request, response) => {
     const event = request.body?.event;
