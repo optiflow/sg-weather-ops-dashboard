@@ -1,0 +1,3 @@
+## 2024-06-03 - Staggered Concurrent API Execution
+**Learning:** Sequential API calls with artificial delays (like the 1s delay in `getCurrentWeather`) create massive performance bottlenecks (10s+ response times). However, simply converting them to concurrent `Promise.all` can trigger HTTP 429 rate limit errors from providers like `api-open.data.gov.sg`.
+**Action:** Use a staggered concurrent approach with `Promise.all` by wrapping API calls in thunks and applying incremental delays (e.g., 0ms, 200ms, 400ms). This provides the performance benefits of concurrency (~80% reduction in response time) while respecting rate limits.
