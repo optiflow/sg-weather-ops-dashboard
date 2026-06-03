@@ -14,20 +14,22 @@ Run all commands from the **root directory**.
 - `npm test` or `npm run test:watch`: Runs Vitest test suite.
 - `npm run test:e2e`: Runs the Playwright smoke test.
 - `npm run lint`: Checks linting and formatting with Biome.
+- `npm run lint:ci`: Runs Biome's CI check.
 - `npm run format`: Formats the codebase with Biome.
 - `npx playwright install`: Installs browser binaries required by Playwright.
 - `npx lefthook validate`: Validates the Git hook configuration.
 
-Before finishing code changes, run the project quality gate from the root:
+Before finishing code changes, run the core project quality gate from the root:
 
 ```bash
 npm test
-npm run test:e2e
 npm run build
 npm run lint
 ```
 
-In sandboxed agent environments, `npm test` may need permission to bind a local port for Supertest. If it fails with `listen EPERM`, rerun the same command with the required permission.
+Run `npm run test:e2e` for browser-facing changes. It also runs in CI and the Lefthook `pre-push` hook.
+
+In sandboxed agent environments, `npm test` and `npm run test:e2e` may need permission to bind a local port. If either command fails with `listen EPERM`, rerun the same command with the required permission.
 
 ## Database Operations
 

@@ -5,3 +5,11 @@ pre-commit:
       run: npm run lint
     test:
       run: npm test
+
+pre-push:
+  parallel: false
+  commands:
+    build:
+      run: npm run build
+    e2e:
+      run: npm run test:e2e

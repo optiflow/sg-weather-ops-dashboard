@@ -12,7 +12,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 2 : 0,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [[process.env.CI ? 'dot' : 'list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
     trace: 'on-first-retry',

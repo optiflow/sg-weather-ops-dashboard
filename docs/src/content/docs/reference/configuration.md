@@ -30,6 +30,7 @@ Defined in the root `package.json`:
 | `test` | `NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest run` | Run test suite |
 | `test:watch` | `NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest` | Run tests in watch mode |
 | `lint` | `biome check .` | Lint and format check with Biome |
+| `lint:ci` | `biome ci .` | Biome check for CI |
 | `format` | `biome format --write .` | Format with Biome |
 | `db:generate` | `drizzle-kit generate` | Generate Drizzle migrations |
 | `db:migrate` | `drizzle-kit migrate` | Apply Drizzle migrations |
@@ -94,6 +95,14 @@ Uses `biome.json` at the root for both linting and formatting:
 - Includes React hook rules
 - Configured to mimic Prettier defaults (single quotes, trailing commas)
 - `docs/**` is excluded from linting (uses separate Astro config)
+
+Local hooks run `npm run lint`, while GitHub Actions runs `npm run lint:ci`.
+
+## Quality Automation
+
+Lefthook is installed through the root `prepare` script. The `pre-commit` hook runs Biome and Vitest. The `pre-push` hook runs the production build and Playwright smoke test.
+
+The GitHub Actions quality workflow installs dependencies with `npm ci`, installs the Chromium browser used by Playwright, then runs Vitest, the production build, Biome CI, and the Playwright smoke test.
 
 ## Astro Starlight Docs
 
