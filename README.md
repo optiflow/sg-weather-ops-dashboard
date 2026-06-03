@@ -61,6 +61,7 @@ npm run lint
 | Persistence | SQLite, Drizzle ORM, generated Drizzle migrations |
 | Docs | Astro Starlight, Mermaid diagrams |
 | Dev URL | Portless named `.localhost` URL |
+| Testing | Vitest, Supertest, Playwright |
 | External API | Singapore data.gov.sg weather APIs |
 
 ## Architecture
@@ -87,6 +88,7 @@ Run commands from the repository root.
 | `npm run dev` | Start the full app through Portless. |
 | `npm run docs` | Start the Astro Starlight docs site. |
 | `npm test` | Run Vitest and Supertest backend tests. |
+| `npm run test:e2e` | Run the Playwright smoke test. |
 | `npm run test:watch` | Run tests in watch mode. |
 | `npm run build` | Build the frontend and compile backend TypeScript. |
 | `npm run lint` | Run Biome checks. |

@@ -17,6 +17,8 @@ backend/*.db-wal
 node_modules/
 dist/
 .vite/
+playwright-report/
+test-results/
 
 # Astro / Starlight
 docs/.astro/

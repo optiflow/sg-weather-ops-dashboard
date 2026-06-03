@@ -73,6 +73,7 @@ Run commands from the repository root.
 | `npm run start` | Run the compiled production server. |
 | `npm run docs` | Start the Astro Starlight docs site at `http://localhost:4321`. |
 | `npm test` | Run Vitest and Supertest tests. |
+| `npm run test:e2e` | Run the Playwright smoke test. |
 | `npm run test:watch` | Run tests in watch mode. |
 | `npm run build` | Build frontend and compile backend TypeScript. |
 | `npm run lint` | Run Biome checks. |
@@ -142,7 +143,7 @@ Match verification to the risk and surface area:
 - Pure logic: focused unit tests.
 - Express routes or database behavior: route and persistence tests.
 - Weather API behavior: fixtures or controlled API-shape tests using `sg-weather-api`.
-- Frontend behavior: component or integration checks plus visual QA when layout, map behavior, or responsive UI changes.
+- Frontend behavior: Playwright smoke checks, component or integration checks, plus visual QA when layout, map behavior, or responsive UI changes.
 - Documentation-only changes: verify links, commands, referenced paths, and run the quality gate when feasible.
 
 Use `repo-quality-gate` before finishing code or documentation tasks unless the user explicitly narrows the request or local constraints prevent it.

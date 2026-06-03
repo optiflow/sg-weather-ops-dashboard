@@ -12,13 +12,17 @@ Run all commands from the **root directory**.
 ## Testing & Quality
 
 - `npm test` or `npm run test:watch`: Runs Vitest test suite.
+- `npm run test:e2e`: Runs the Playwright smoke test.
 - `npm run lint`: Checks linting and formatting with Biome.
 - `npm run format`: Formats the codebase with Biome.
+- `npx playwright install`: Installs browser binaries required by Playwright.
+- `npx lefthook validate`: Validates the Git hook configuration.
 
 Before finishing code changes, run the project quality gate from the root:
 
 ```bash
 npm test
+npm run test:e2e
 npm run build
 npm run lint
 ```

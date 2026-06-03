@@ -11,6 +11,8 @@
       "**",
       "!**/dist/**",
       "!**/node_modules/**",
+      "!**/playwright-report/**",
+      "!**/test-results/**",
       "!**/backend/weather.db*",
       "!**/backend/drizzle/meta/**",
       "!**/docs/**",
