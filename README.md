@@ -10,6 +10,8 @@ The project is small enough to study end to end. It still covers practical deliv
 
 This repository was built as part of an [AI Singapore AIxTech](https://aisingapore.org/aixtech/) Programme Assignment. It demonstrates my ability to use agentic AI tools to move a solution from requirements to implementation, documentation, debugging, and verification, combining OpenAI Codex and Claude Code with conventional TypeScript, API, database, and frontend engineering.
 
+For the reviewable delivery narrative, see the [Agentic Delivery Case Study](docs/src/content/docs/guides/agentic-delivery-case-study.md).
+
 ## Quick Start
 
 Install dependencies from the repository root:

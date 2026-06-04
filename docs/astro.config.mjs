@@ -16,6 +16,7 @@ export default defineConfig({
           label: 'Guides',
           items: [
             { label: 'Getting Started', slug: 'guides/getting-started' },
+            { label: 'Agentic Delivery Case Study', slug: 'guides/agentic-delivery-case-study' },
             { label: 'Adding Locations', slug: 'guides/adding-locations' },
             { label: 'Weather Data Pipeline', slug: 'guides/weather-data' },
           ],
