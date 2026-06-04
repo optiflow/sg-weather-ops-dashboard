@@ -1,4 +1,4 @@
-const baseUrl = process.env.WEATHER_STARTER_URL ?? 'http://127.0.0.1:3000';
+const baseUrl = process.env.SG_WEATHER_OPS_URL ?? 'http://127.0.0.1:3000';
 
 async function check(path) {
   const response = await fetch(`${baseUrl}${path}`);
@@ -11,4 +11,4 @@ async function check(path) {
 await check('/health');
 await check('/api/locations');
 
-console.log(`Weather Starter is healthy at ${baseUrl}`);
+console.log(`SG Weather Ops Dashboard is healthy at ${baseUrl}`);

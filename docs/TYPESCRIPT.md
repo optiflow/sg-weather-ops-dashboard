@@ -1,6 +1,6 @@
 # TypeScript Conventions
 
-The `weather-starter` project enforces strict TypeScript across both frontend and backend workspaces.
+The `sg-weather-ops-dashboard` project enforces strict TypeScript across both frontend and backend workspaces.
 
 ## Configuration Differences
 

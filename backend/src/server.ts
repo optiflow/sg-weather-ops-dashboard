@@ -106,6 +106,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const app = await createApp();
 
   app.listen(port, '127.0.0.1', () => {
-    logger.info({ url: `http://127.0.0.1:${port}` }, 'Weather Starter listening');
+    logger.info({ url: `http://127.0.0.1:${port}` }, 'SG Weather Ops Dashboard listening');
   });
 }

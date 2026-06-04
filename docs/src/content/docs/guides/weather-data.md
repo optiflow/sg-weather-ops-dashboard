@@ -1,9 +1,9 @@
 ---
 title: Weather Data Pipeline
-description: How Weather Starter fetches and maps real-time Singapore weather data.
+description: How SG Weather Ops Dashboard fetches and maps real-time Singapore weather data.
 ---
 
-Weather Starter stores a weather snapshot, not a time series. A snapshot is fetched when a location is created and again when the user refreshes it. The snapshot is persisted in the `locations` row and rendered directly by the frontend.
+SG Weather Ops Dashboard stores a weather snapshot, not a time series. A snapshot is fetched when a location is created and again when the user refreshes it. The snapshot is persisted in the `locations` row and rendered directly by the frontend.
 
 ## Data Pipeline
 
@@ -51,7 +51,7 @@ graph TD
 | `/v2/real-time/api/twenty-four-hr-forecast` | `api-open.data.gov.sg` | Forecast high/low temps, period forecasts |
 | `/v1/environment/4-day-weather-forecast` | `api.data.gov.sg` _(legacy)_ | 4-day daily forecast |
 
-The client sends `Accept: application/json`, a `weather-starter/0.1 (educational project)` user agent, and `x-api-key` only when `WEATHER_API_KEY` is configured.
+The client sends `Accept: application/json`, a `sg-weather-ops-dashboard/0.1 (educational project)` user agent, and `x-api-key` only when `WEATHER_API_KEY` is configured.
 
 ## Forecast-Area Matching
 

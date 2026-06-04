@@ -5,7 +5,7 @@ description: Project configuration files and environment setup.
 
 ## Monorepo Structure
 
-Weather Starter is an npm workspaces monorepo with three workspaces:
+SG Weather Ops Dashboard is an npm workspaces monorepo with three workspaces:
 
 ```mermaid
 graph TD
@@ -128,7 +128,7 @@ The backend uses [Pino](https://getpino.io/) for structured JSON logging:
 
 ## Dev Server (Portless)
 
-`scripts/dev.mjs` wraps the backend with [Portless](https://github.com/nicepkg/portless), which provides a stable local URL (`weather-starter.localhost:1355`) regardless of the actual port Express binds to.
+`scripts/dev.mjs` wraps the backend with [Portless](https://github.com/nicepkg/portless), which provides a stable local URL (`sg-weather-ops-dashboard.localhost:1355`) regardless of the actual port Express binds to.
 
 Browser geolocation is expected to work on `localhost` and `*.localhost` local origins. If a browser blocks geolocation over HTTP during **Use my location** testing, set `PORTLESS_HTTPS=1` when running `npm run dev`.
 
@@ -143,7 +143,7 @@ Browser geolocation is expected to work on `localhost` and `*.localhost` local o
 | `PORT` | `backend/src/server.ts` | Direct Express listen port when running the compiled server manually. |
 | `PORTLESS_PORT` | `scripts/dev.mjs` | Stable local Portless port. |
 | `PORTLESS_HTTPS` | `scripts/dev.mjs` | Enables local HTTPS through Portless when set to `1`. |
-| `WEATHER_STARTER_URL` | `scripts/doctor.mjs` | Base URL checked by `npm run doctor`; defaults to `http://127.0.0.1:3000`. |
+| `SG_WEATHER_OPS_URL` | `scripts/doctor.mjs` | Base URL checked by `npm run doctor`; defaults to `http://127.0.0.1:3000`. |
 
 ## Runtime Modes
 

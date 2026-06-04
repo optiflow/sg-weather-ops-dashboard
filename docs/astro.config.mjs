@@ -6,10 +6,10 @@ import mermaid from 'astro-mermaid';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://optiflow.github.io',
-  base: '/weather_starter',
+  base: '/sg-weather-ops-dashboard',
   integrations: [
     starlight({
-      title: 'Weather Starter',
+      title: 'SG Weather Ops Dashboard',
       customCss: ['./src/styles/landing.css'],
       sidebar: [
         {

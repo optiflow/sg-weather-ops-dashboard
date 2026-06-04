@@ -1,6 +1,6 @@
 ---
 name: drizzle-sqlite-migration
-description: Change weather-starter SQLite persistence with Drizzle schema updates, migrations, database helpers, tests, and docs.
+description: Change SG Weather Ops Dashboard SQLite persistence with Drizzle schema updates, migrations, database helpers, tests, and docs.
 ---
 
 # Drizzle SQLite Migration

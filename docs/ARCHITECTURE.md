@@ -1,6 +1,6 @@
 # Project Architecture
 
-The `weather-starter` project is a monorepo managed via npm workspaces.
+The `sg-weather-ops-dashboard` project is a monorepo managed via npm workspaces.
 
 ## Workspaces
 

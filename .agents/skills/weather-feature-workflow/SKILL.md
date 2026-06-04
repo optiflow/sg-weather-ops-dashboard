@@ -1,6 +1,6 @@
 ---
 name: weather-feature-workflow
-description: Implement weather-starter feature tasks that span Express routes, Drizzle/SQLite data, Singapore weather data, React state, and dashboard components.
+description: Implement SG Weather Ops Dashboard feature tasks that span Express routes, Drizzle/SQLite data, Singapore weather data, React state, and dashboard components.
 ---
 
 # Weather Feature Workflow

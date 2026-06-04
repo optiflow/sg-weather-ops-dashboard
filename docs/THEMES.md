@@ -1,6 +1,6 @@
-# Weather Starter Themes
+# SG Weather Ops Dashboard Themes
 
-Weather Starter ships with five dashboard themes. The theme selector in `frontend/src/components/ThemeSelector.tsx` exposes the same five values defined by `Theme` in `frontend/src/state/themeStore.tsx`.
+SG Weather Ops Dashboard ships with five dashboard themes. The theme selector in `frontend/src/components/ThemeSelector.tsx` exposes the same five values defined by `Theme` in `frontend/src/state/themeStore.tsx`.
 
 ## Implemented Themes
 
@@ -14,7 +14,7 @@ Weather Starter ships with five dashboard themes. The theme selector in `fronten
 
 ## Source Files
 
-- `frontend/src/state/themeStore.tsx` defines the valid theme values and stores the selected theme in `localStorage` under `weather_starter_theme`.
+- `frontend/src/state/themeStore.tsx` defines the valid theme values and stores the selected theme in `localStorage` under `sg_weather_ops_dashboard_theme`.
 - `frontend/src/components/ThemeSelector.tsx` renders the selector.
 - `frontend/src/index.css` defines the body classes and theme-specific style overrides.
 

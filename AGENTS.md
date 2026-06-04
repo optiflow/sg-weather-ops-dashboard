@@ -1,6 +1,6 @@
 ---
-name: weather-starter-agent
-description: Agent operating contract for the Weather Starter repository
+name: sg-weather-ops-dashboard-agent
+description: Agent operating contract for the SG Weather Ops Dashboard repository
 ver: 31052026
 ---
 
@@ -8,7 +8,7 @@ ver: 31052026
 
 ## Purpose
 
-Weather Starter is a Singapore weather app built as an npm workspaces monorepo. The frontend is a React/Vite/Tailwind dashboard with Leaflet maps. The backend is a Node.js/Express API with SQLite persistence through Drizzle ORM and Pino logging. The docs workspace is an Astro Starlight site.
+SG Weather Ops Dashboard is a Singapore weather app built as an npm workspaces monorepo. The frontend is a React/Vite/Tailwind dashboard with Leaflet maps. The backend is a Node.js/Express API with SQLite persistence through Drizzle ORM and Pino logging. The docs workspace is an Astro Starlight site.
 
 This file is the agent-facing operating contract. Keep user-facing onboarding in `README.md` and detailed reference material in `docs/`.
 
@@ -210,6 +210,6 @@ The current project code-review sub-agent is `.agents/code-review/agent.md`.
 
 ## External Code Index
 
-- DeepWiki index: https://deepwiki.com/optiflow/weather_starter
+- DeepWiki index: https://deepwiki.com/optiflow/sg-weather-ops-dashboard
 - Use DeepWiki for broad orientation only when network or MCP access is available.
 - Local files remain the source of truth before edits and final claims.

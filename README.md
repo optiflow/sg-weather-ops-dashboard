@@ -1,14 +1,14 @@
-# Weather Starter
+# SG Weather Ops Dashboard
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/optiflow/weather_starter)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/optiflow/sg-weather-ops-dashboard)
 
-Weather Starter is a full-stack TypeScript app for saving Singapore locations and viewing the latest local weather snapshot for each one. It is built as an npm workspaces monorepo with a React/Vite dashboard, an Express API, SQLite persistence through Drizzle ORM, and Singapore data.gov.sg weather endpoints.
+SG Weather Ops Dashboard is an AI-assisted full-stack deployment case study for saving Singapore locations and viewing the latest local weather snapshot for each one. It is built as an npm workspaces monorepo with a React/Vite dashboard, an Express API, SQLite persistence through Drizzle ORM, and Singapore data.gov.sg weather endpoints.
 
-The project is small enough to study end to end. It still covers real full-stack work: location creation, browser geolocation, API validation, weather aggregation, SQLite persistence, refresh behavior, frontend state, responsive UI, and local docs.
+The project is small enough to study end to end. It still covers practical delivery surfaces: location creation, browser geolocation, API validation, external data aggregation, SQLite persistence, refresh behavior, frontend state, responsive UI, local docs, automated tests, and a repeatable quality gate.
 
 ## Project Context
 
-This repository was built as part of an [AI Singapore AIxTech](https://aisingapore.org/aixtech/) Programme Assignment. It demonstrates my ability to use agentic AI tools to develop a full-stack solution, combining OpenAI Codex and Claude Code for implementation, documentation, debugging, and verification.
+This repository was built as part of an [AI Singapore AIxTech](https://aisingapore.org/aixtech/) Programme Assignment. It demonstrates my ability to use agentic AI tools to move a solution from requirements to implementation, documentation, debugging, and verification, combining OpenAI Codex and Claude Code with conventional TypeScript, API, database, and frontend engineering.
 
 ## Quick Start
 
@@ -27,7 +27,7 @@ npm run dev
 The root dev command runs Express and Vite middleware in one Node process behind Portless. Open the URL printed by Portless. The default local URL is usually:
 
 ```text
-http://weather-starter.localhost:1355
+http://sg-weather-ops-dashboard.localhost:1355
 ```
 
 Start the docs site:
@@ -72,7 +72,7 @@ npm run lint
 
 ```mermaid
 flowchart LR
-  Browser["Browser\nReact + Vite dashboard"] --> Portless["Portless\nweather-starter.localhost:1355"]
+  Browser["Browser\nReact + Vite dashboard"] --> Portless["Portless\nsg-weather-ops-dashboard.localhost:1355"]
   Portless --> Express["Express app\n/api routes + Vite middleware"]
   Express --> SQLite["SQLite\nbackend/weather.db"]
   Express --> Weather["SingaporeWeatherClient"]
@@ -123,7 +123,7 @@ Full request, response, validation, and error behavior is documented in [API End
 ## Project Map
 
 ```text
-weather-starter/
+sg-weather-ops-dashboard/
 |-- backend/        # Express API, SQLite/Drizzle persistence, weather client
 |-- frontend/       # React/Vite dashboard, state, components, Leaflet map
 |-- docs/           # Astro Starlight documentation site

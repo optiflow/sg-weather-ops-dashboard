@@ -458,7 +458,8 @@ export class SingaporeWeatherClient {
         signal: controller.signal,
         headers: {
           Accept: 'application/json',
-          'User-Agent': this.options.userAgent ?? 'weather-starter/0.1 (educational project)',
+          'User-Agent':
+            this.options.userAgent ?? 'sg-weather-ops-dashboard/0.1 (educational project)',
           ...(this.options.apiKey ? { 'x-api-key': this.options.apiKey } : {}),
         },
       });

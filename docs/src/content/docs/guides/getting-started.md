@@ -1,9 +1,9 @@
 ---
 title: Getting Started
-description: Install dependencies and run the Weather Starter development server.
+description: Install dependencies and run the SG Weather Ops Dashboard development server.
 ---
 
-Weather Starter is an npm workspaces monorepo with three workspaces: `frontend`, `backend`, and `docs`. Run commands from the repository root unless a command explicitly uses `-w docs`, `-w frontend`, or `-w backend`.
+SG Weather Ops Dashboard is an npm workspaces monorepo with three workspaces: `frontend`, `backend`, and `docs`. Run commands from the repository root unless a command explicitly uses `-w docs`, `-w frontend`, or `-w backend`.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Weather Starter is an npm workspaces monorepo with three workspaces: `frontend`,
 ## Install
 
 ```bash
-cd weather-starter
+cd sg-weather-ops-dashboard
 npm install
 ```
 
@@ -27,14 +27,14 @@ npm run dev
 
 This runs `scripts/dev.mjs`, which starts:
 
-- `portless run --name weather-starter`
+- `portless run --name sg-weather-ops-dashboard`
 - `tsx watch backend/src/server.ts`
 - Express with Vite loaded as middleware in development mode
 
 The frontend and backend run behind one stable local URL. Open the URL printed by Portless. By default it is:
 
 ```
-http://weather-starter.localhost:1355
+http://sg-weather-ops-dashboard.localhost:1355
 ```
 
 The browser uses relative `/api` requests, so no frontend proxy is needed in this default flow.
@@ -54,7 +54,7 @@ PORTLESS_HTTPS=1 npm run dev
 If the UI reports that the server is unavailable, verify the backend:
 
 ```bash
-curl http://weather-starter.localhost:1355/health
+curl http://sg-weather-ops-dashboard.localhost:1355/health
 ```
 
 Expected response:

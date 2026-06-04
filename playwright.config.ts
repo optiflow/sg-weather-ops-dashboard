@@ -5,7 +5,7 @@ import { defineConfig } from '@playwright/test';
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000';
 const databasePath =
   process.env.PLAYWRIGHT_DATABASE_PATH ??
-  join(tmpdir(), 'weather-starter-playwright', 'weather.db');
+  join(tmpdir(), 'sg-weather-ops-dashboard-playwright', 'weather.db');
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -27,8 +27,8 @@ export default defineConfig({
       DATABASE_PATH: databasePath,
       LOG_LEVEL: 'silent',
       PORT: '3000',
-      WEATHER_STARTER_DEV_PROXY: '0',
-      WEATHER_STARTER_DEV_WATCH: '0',
+      SG_WEATHER_OPS_DEV_PROXY: '0',
+      SG_WEATHER_OPS_DEV_WATCH: '0',
     },
   },
 });

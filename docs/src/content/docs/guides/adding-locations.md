@@ -1,9 +1,9 @@
 ---
 title: Adding Locations
-description: How locations are created, stored, and managed in Weather Starter.
+description: How locations are created, stored, and managed in SG Weather Ops Dashboard.
 ---
 
-Weather Starter stores saved locations in SQLite and keeps one latest weather snapshot per location. Locations can be created manually from latitude/longitude input or from the browser position through the **Use my location** button.
+SG Weather Ops Dashboard stores saved locations in SQLite and keeps one latest weather snapshot per location. Locations can be created manually from latitude/longitude input or from the browser position through the **Use my location** button.
 
 The backend only accepts coordinates inside the app's Singapore bounding box:
 
@@ -114,7 +114,7 @@ sequenceDiagram
 
 Local development normally works on `localhost` and `*.localhost` origins. If your browser blocks geolocation over HTTP, run the dev server with `PORTLESS_HTTPS=1 npm run dev`.
 
-If **Use my location** reports that the weather server is unavailable or shows a request failure, open `http://weather-starter.localhost:1355/health`. It should return `{ "status": "healthy" }`; Portless HTML or `No app registered` means the dev server should be restarted with `npm run dev`.
+If **Use my location** reports that the weather server is unavailable or shows a request failure, open `http://sg-weather-ops-dashboard.localhost:1355/health`. It should return `{ "status": "healthy" }`; Portless HTML or `No app registered` means the dev server should be restarted with `npm run dev`.
 
 ### Idempotent Forecast-Area Creates
 

@@ -4,13 +4,13 @@ const nodeOptions = [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWa
   .filter(Boolean)
   .join(' ');
 const appCommand =
-  process.env.WEATHER_STARTER_DEV_WATCH === '0'
+  process.env.SG_WEATHER_OPS_DEV_WATCH === '0'
     ? ['tsx', 'backend/src/server.ts']
     : ['tsx', 'watch', 'backend/src/server.ts'];
-const usePortless = process.env.WEATHER_STARTER_DEV_PROXY !== '0';
+const usePortless = process.env.SG_WEATHER_OPS_DEV_PROXY !== '0';
 const command = usePortless ? 'portless' : appCommand[0];
 const args = usePortless
-  ? ['run', '--name', 'weather-starter', ...appCommand]
+  ? ['run', '--name', 'sg-weather-ops-dashboard', ...appCommand]
   : appCommand.slice(1);
 
 const child = spawn(command, args, {

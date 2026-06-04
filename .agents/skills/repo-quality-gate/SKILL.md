@@ -1,11 +1,11 @@
 ---
 name: repo-quality-gate
-description: Run the weather-starter final verification workflow after code changes, including tests, build, lint, and docs review from the repo root.
+description: Run the SG Weather Ops Dashboard final verification workflow after code changes, including tests, build, lint, and docs review from the repo root.
 ---
 
 # Repo Quality Gate
 
-Use this skill before finishing any code or documentation task in `weather-starter`.
+Use this skill before finishing any code or documentation task in `sg-weather-ops-dashboard`.
 
 ## Workflow
 

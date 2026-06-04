@@ -16,7 +16,7 @@ export interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-const THEME_STORAGE_KEY = 'weather_starter_theme';
+const THEME_STORAGE_KEY = 'sg_weather_ops_dashboard_theme';
 
 function isTheme(value: string | null): value is Theme {
   return THEMES.some((theme) => theme.value === value);

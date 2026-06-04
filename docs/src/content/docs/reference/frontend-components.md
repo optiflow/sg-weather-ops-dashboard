@@ -1,6 +1,6 @@
 ---
 title: Frontend Components
-description: React component tree and state management in the Weather Starter dashboard.
+description: React component tree and state management in the SG Weather Ops Dashboard dashboard.
 ---
 
 The frontend is a React 18 single-page app built with Vite and Tailwind CSS. It uses React Context for app state and theme state, a small `fetch` wrapper for API calls, and Leaflet through `react-leaflet` for the map.
@@ -63,7 +63,7 @@ Holds all application state for locations and exposes actions through a `StoreVa
 
 ### `ThemeProvider` (`state/themeStore.tsx`)
 
-Manages the active visual theme. The selected theme is persisted in `localStorage` under the key `weather_starter_theme`.
+Manages the active visual theme. The selected theme is persisted in `localStorage` under the key `sg_weather_ops_dashboard_theme`.
 
 Available themes: `apple`, `cotton-candy`, `night-city`, `pixel`, `terminal`.
 
@@ -166,4 +166,4 @@ Most layout styling is in Tailwind utility classes. `frontend/src/index.css` def
 | Pixel | `theme-pixel` |
 | Terminal | `theme-terminal` |
 
-The theme selector writes the selected value to `localStorage` under `weather_starter_theme`.
+The theme selector writes the selected value to `localStorage` under `sg_weather_ops_dashboard_theme`.

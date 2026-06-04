@@ -9,7 +9,7 @@ describe('server API', () => {
   let app: Awaited<ReturnType<typeof import('./server.js').createApp>>;
 
   beforeAll(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), 'weather-starter-server-test-'));
+    tempDir = await mkdtemp(join(tmpdir(), 'sg-weather-ops-dashboard-server-test-'));
     process.env.DATABASE_PATH = join(tempDir, 'weather.db');
     process.env.LOG_LEVEL = 'silent';
 

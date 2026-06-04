@@ -1,6 +1,6 @@
 ---
 name: frontend-visual-qa
-description: Verify weather-starter frontend, responsive layout, theme, Leaflet map, and browser behavior after UI changes.
+description: Verify SG Weather Ops Dashboard frontend, responsive layout, theme, Leaflet map, and browser behavior after UI changes.
 ---
 
 # Frontend Visual QA
@@ -11,7 +11,7 @@ Use this skill after dashboard, component, theme, responsive layout, or Leaflet 
 
 1. Start the app from the repo root:
    - `npm run dev`
-2. Open the Portless URL printed by the dev server, usually `http://weather-starter.localhost:1355`.
+2. Open the Portless URL printed by the dev server, usually `http://sg-weather-ops-dashboard.localhost:1355`.
 3. Verify the core screens:
    - Empty state.
    - Location list with at least one saved location.

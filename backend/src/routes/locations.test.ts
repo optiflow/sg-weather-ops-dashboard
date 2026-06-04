@@ -49,7 +49,7 @@ describe('locations API', () => {
   let nearestAreaRequests: Array<{ latitude: number; longitude: number }>;
 
   beforeAll(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), 'weather-starter-test-'));
+    tempDir = await mkdtemp(join(tmpdir(), 'sg-weather-ops-dashboard-test-'));
     process.env.DATABASE_PATH = join(tempDir, 'weather.db');
     process.env.LOG_LEVEL = 'silent';
     weatherRequestHandler = async () => weather;

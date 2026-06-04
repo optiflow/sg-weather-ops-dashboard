@@ -1,6 +1,6 @@
-# Weather Starter
+# SG Weather Ops Dashboard
 
-> Weather Starter is a full-stack TypeScript app for tracking Singapore weather snapshots. It uses a React/Vite/Tailwind frontend, an Express backend, SQLite persistence through Drizzle ORM, and data.gov.sg weather APIs.
+> SG Weather Ops Dashboard is an AI-assisted full-stack TypeScript deployment case study for tracking Singapore weather snapshots. It uses a React/Vite/Tailwind frontend, an Express backend, SQLite persistence through Drizzle ORM, and data.gov.sg weather APIs.
 
 Important notes:
 - Local repository files are the source of truth for implementation details.
@@ -44,7 +44,7 @@ Important notes:
 
 ## Optional
 
-- [DeepWiki index](https://deepwiki.com/optiflow/weather_starter): External code index for broad orientation; verify final claims against local files.
+- [DeepWiki index](https://deepwiki.com/optiflow/sg-weather-ops-dashboard): External code index for broad orientation; verify final claims against local files.
 - [data.gov.sg 2-hour forecast](https://data.gov.sg/datasets/d_3f9e064e25005b0e42969944ccaf2e7a/view): Provider documentation for the app's primary forecast-area endpoint.
 - [data.gov.sg realtime weather readings](https://data.gov.sg/collections/realtime-weather-readings/view): Provider documentation for temperature, humidity, rainfall, wind, PSI, PM2.5, and related readings.
 - [data.gov.sg weather forecast collection](https://data.gov.sg/collections/weather-forecast/view): Provider documentation for broader Singapore forecast endpoints.

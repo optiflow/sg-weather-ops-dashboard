@@ -1,6 +1,6 @@
 ---
 title: API Endpoints
-description: REST API reference for the Weather Starter Express backend.
+description: REST API reference for the SG Weather Ops Dashboard Express backend.
 ---
 
 The Express app is created in `backend/src/server.ts`. Location routes are mounted under `/api` from `backend/src/routes/locations.ts`. The health route is intentionally not prefixed.

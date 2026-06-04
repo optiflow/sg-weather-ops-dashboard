@@ -1,27 +1,27 @@
 ---
-title: Weather Starter
-description: A full-stack Singapore weather dashboard built with React, Express, and SQLite.
+title: SG Weather Ops Dashboard
+description: An AI-assisted full-stack Singapore weather operations dashboard built with React, Express, and SQLite.
 template: splash
 hero:
-  tagline: A Singapore weather dashboard for saving forecast areas, refreshing real data snapshots, and studying a compact full-stack TypeScript app.
+  tagline: An AI-assisted Singapore weather operations dashboard for saving forecast areas, refreshing real data snapshots, and studying compact full-stack TypeScript delivery.
   image:
     file: ../../assets/dashboard-preview.webp
-    alt: Weather Starter dashboard preview for Ang Mo Kio showing thundery showers, 28 degrees, forecast periods, and a 4-day outlook.
+    alt: SG Weather Ops Dashboard preview for Ang Mo Kio showing thundery showers, 28 degrees, forecast periods, and a 4-day outlook.
   actions:
     - text: Getting Started
-      link: /weather_starter/guides/getting-started/
+      link: /sg-weather-ops-dashboard/guides/getting-started/
       icon: right-arrow
     - text: View Data Pipeline
-      link: /weather_starter/guides/weather-data/
+      link: /sg-weather-ops-dashboard/guides/weather-data/
       icon: external
       variant: minimal
 ---
 
 import { LinkCard } from '@astrojs/starlight/components';
 
-## What is Weather Starter?
+## What is SG Weather Ops Dashboard?
 
-Weather Starter is an educational full-stack TypeScript app for saving Singapore locations and viewing the latest weather snapshot for each saved place. The dashboard combines a React/Vite interface, an Express API, SQLite persistence through Drizzle ORM, and Singapore data.gov.sg weather endpoints.
+SG Weather Ops Dashboard is an AI-assisted full-stack TypeScript deployment case study for saving Singapore locations and viewing the latest weather snapshot for each saved place. The dashboard combines a React/Vite interface, an Express API, SQLite persistence through Drizzle ORM, Singapore data.gov.sg weather endpoints, docs, tests, and local verification workflows.
 
 <div class="landing-signal">
   <div class="landing-signal__item">
@@ -40,7 +40,7 @@ Weather Starter is an educational full-stack TypeScript app for saving Singapore
 
 ## Architecture at a Glance
 
-<div class="landing-flow-summary" aria-label="Weather Starter request flow">
+<div class="landing-flow-summary" aria-label="SG Weather Ops Dashboard request flow">
   <div class="landing-flow-summary__step">
     <strong>Browser dashboard</strong>
     <span>React, Vite, Tailwind, theme state, and Leaflet map UI.</span>
@@ -66,22 +66,22 @@ The development runtime serves the dashboard and API from one Portless URL, so b
 <div class="landing-link-grid">
   <LinkCard
     title="Run the app"
-    href="/weather_starter/guides/getting-started/"
+    href="/sg-weather-ops-dashboard/guides/getting-started/"
     description="Install dependencies, start the Portless dev URL, and verify the local dashboard."
   />
   <LinkCard
     title="Add locations"
-    href="/weather_starter/guides/adding-locations/"
+    href="/sg-weather-ops-dashboard/guides/adding-locations/"
     description="Use coordinates or browser geolocation to save Singapore forecast areas."
   />
   <LinkCard
     title="Understand weather data"
-    href="/weather_starter/guides/weather-data/"
+    href="/sg-weather-ops-dashboard/guides/weather-data/"
     description="Trace data.gov.sg provider calls into forecast periods, metrics, and stored snapshots."
   />
   <LinkCard
     title="Inspect implementation"
-    href="/weather_starter/reference/frontend-components/"
+    href="/sg-weather-ops-dashboard/reference/frontend-components/"
     description="Review the React component tree, state stores, API client, and Leaflet map surface."
   />
 </div>
@@ -91,18 +91,18 @@ The development runtime serves the dashboard and API from one Portless URL, so b
 <div class="landing-implementation">
   <section class="landing-implementation__panel">
     <h3>Backend API</h3>
-    <p><code>backend/src/server.ts</code> creates Express, security headers, frontend logging, and Vite/static serving. <code>backend/src/routes/locations.ts</code> owns location endpoints. See <a href="/weather_starter/reference/api-endpoints/">API endpoints</a>.</p>
+    <p><code>backend/src/server.ts</code> creates Express, security headers, frontend logging, and Vite/static serving. <code>backend/src/routes/locations.ts</code> owns location endpoints. See <a href="/sg-weather-ops-dashboard/reference/api-endpoints/">API endpoints</a>.</p>
   </section>
   <section class="landing-implementation__panel">
     <h3>Weather data</h3>
-    <p><code>backend/src/weather.ts</code> maps data.gov.sg responses into the snapshot rendered by the dashboard. See <a href="/weather_starter/guides/weather-data/">Weather Data Pipeline</a>.</p>
+    <p><code>backend/src/weather.ts</code> maps data.gov.sg responses into the snapshot rendered by the dashboard. See <a href="/sg-weather-ops-dashboard/guides/weather-data/">Weather Data Pipeline</a>.</p>
   </section>
   <section class="landing-implementation__panel">
     <h3>Persistence</h3>
-    <p><code>backend/src/db.ts</code> and <code>backend/src/schema.ts</code> manage Drizzle, migrations, and snapshot columns. See <a href="/weather_starter/reference/database-schema/">Database Schema</a>.</p>
+    <p><code>backend/src/db.ts</code> and <code>backend/src/schema.ts</code> manage Drizzle, migrations, and snapshot columns. See <a href="/sg-weather-ops-dashboard/reference/database-schema/">Database Schema</a>.</p>
   </section>
   <section class="landing-implementation__panel">
     <h3>Dashboard UI</h3>
-    <p><code>frontend/src/App.tsx</code>, <code>frontend/src/state/</code>, and <code>frontend/src/components/</code> render locations, forecast strips, metric tiles, themes, and the map. See <a href="/weather_starter/reference/frontend-components/">Frontend Components</a>.</p>
+    <p><code>frontend/src/App.tsx</code>, <code>frontend/src/state/</code>, and <code>frontend/src/components/</code> render locations, forecast strips, metric tiles, themes, and the map. See <a href="/sg-weather-ops-dashboard/reference/frontend-components/">Frontend Components</a>.</p>
   </section>
 </div>

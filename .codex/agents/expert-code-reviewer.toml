@@ -52,7 +52,7 @@ Apply the following lenses systematically to every review. Do not skip any lens.
 - Are tests testing behavior, not implementation details?
 - Would the existing tests catch regressions in this area?
 
-### 7. Project Conventions (weather-starter specific)
+### 7. Project Conventions (SG Weather Ops Dashboard specific)
 - Does the code follow the project's working contract from AGENTS.md?
 - Are Drizzle patterns used correctly for any database operations?
 - Are Express routes keeping logic testable and using Drizzle for persistence?

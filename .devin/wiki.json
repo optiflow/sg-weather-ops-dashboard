@@ -1,7 +1,7 @@
 {
   "repo_notes": [
     {
-      "content": "Weather Starter is a TypeScript Singapore weather app monorepo managed with npm workspaces. The main source areas are frontend/ for the React/Vite/Tailwind/Leaflet dashboard, backend/ for the Node.js/Express API with SQLite and Drizzle ORM, docs/ for the Astro Starlight documentation site, scripts/ for local orchestration, and .agents/ for repo-local agent workflows.",
+      "content": "SG Weather Ops Dashboard is an AI-assisted TypeScript Singapore weather operations dashboard monorepo managed with npm workspaces. The main source areas are frontend/ for the React/Vite/Tailwind/Leaflet dashboard, backend/ for the Node.js/Express API with SQLite and Drizzle ORM, docs/ for the Astro Starlight documentation site, scripts/ for local orchestration, and .agents/ for repo-local agent workflows.",
       "author": "Repository maintainer"
     },
     {
@@ -24,7 +24,7 @@
   "pages": [
     {
       "title": "Overview",
-      "purpose": "Orient readers to Weather Starter as a full-stack TypeScript Singapore weather app and summarize how the frontend, backend, weather provider, SQLite persistence, docs, scripts, and agent guidance fit together.",
+      "purpose": "Orient readers to SG Weather Ops Dashboard as an AI-assisted full-stack TypeScript Singapore weather operations case study and summarize how the frontend, backend, weather provider, SQLite persistence, docs, scripts, and agent guidance fit together.",
       "parent": null,
       "page_notes": [
         "Explicitly state this is a TypeScript npm-workspaces repository, not a Python workspace.",
