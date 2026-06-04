@@ -6,6 +6,10 @@ Weather Starter is a full-stack TypeScript app for saving Singapore locations an
 
 The project is small enough to study end to end. It still covers real full-stack work: location creation, browser geolocation, API validation, weather aggregation, SQLite persistence, refresh behavior, frontend state, responsive UI, and local docs.
 
+## Project Context
+
+This repository was built as part of an [AI Singapore AIxTech](https://aisingapore.org/aixtech/) Programme Assignment. It demonstrates my ability to use agentic AI tools to develop a full-stack solution, combining OpenAI Codex and Claude Code for implementation, documentation, debugging, and verification.
+
 ## Quick Start
 
 Install dependencies from the repository root:
