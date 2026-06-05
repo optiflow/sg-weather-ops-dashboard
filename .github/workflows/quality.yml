@@ -34,6 +34,9 @@ jobs:
       - name: Build app
         run: npm run build
 
+      - name: Build docs
+        run: npm run docs:build
+
       - name: Run Biome CI
         run: npm run lint:ci
 

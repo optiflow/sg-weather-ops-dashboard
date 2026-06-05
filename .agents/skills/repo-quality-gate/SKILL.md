@@ -13,8 +13,9 @@ Run commands from the repository root:
 
 1. `npm test`
 2. `npm run build`
-3. `npm run lint`
-4. Review `/docs` for files affected by the change and update them when behavior, commands, architecture, or conventions changed.
+3. `npm run docs:build`
+4. `npm run lint`
+5. Review `/docs` for files affected by the change and update them when behavior, commands, architecture, or conventions changed.
 
 ## Notes
 

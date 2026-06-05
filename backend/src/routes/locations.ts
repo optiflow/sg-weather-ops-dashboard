@@ -97,11 +97,20 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
           .json({ location: updated ?? location, created: true, matched_area: matchedArea });
       } catch (error) {
         if (!(error instanceof WeatherProviderError)) throw error;
+        const locationWithMatchedArea = (await updateWeather(location.id, {
+          ...location.weather,
+          area: matchedArea.name,
+        })) ?? {
+          ...location,
+          weather: { ...location.weather, area: matchedArea.name },
+        };
         logger.warn(
           { err: error, locationId: location.id },
           'weather refresh failed after location create from browser position',
         );
-        response.status(201).json({ location, created: true, matched_area: matchedArea });
+        response
+          .status(201)
+          .json({ location: locationWithMatchedArea, created: true, matched_area: matchedArea });
       }
     } catch (error) {
       if (error instanceof WeatherProviderError) {

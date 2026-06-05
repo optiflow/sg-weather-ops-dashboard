@@ -92,7 +92,6 @@ export function StoreProvider({ children }: ProviderProps) {
         });
         return result;
       } catch (err) {
-        setError(err);
         logInteraction('location_from_position_failed', {
           error: err instanceof Error ? err.message : 'Unknown error',
         });

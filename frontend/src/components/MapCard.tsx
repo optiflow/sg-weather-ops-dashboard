@@ -1,5 +1,5 @@
 import L from 'leaflet';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { renderToString } from 'react-dom/server';
 import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
 import { useStore } from '../state/store';
@@ -35,15 +35,23 @@ function MapBoundsUpdater({ locations }: { locations: Location[] }) {
 export function MapCard() {
   const { locations } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const expandButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const closeFullscreen = useCallback(() => {
+    setIsFullscreen(false);
+    window.setTimeout(() => expandButtonRef.current?.focus(), 0);
+  }, []);
 
   useEffect(() => {
     if (!isFullscreen) return;
+    closeButtonRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsFullscreen(false);
+      if (event.key === 'Escape') closeFullscreen();
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [isFullscreen]);
+  }, [closeFullscreen, isFullscreen]);
 
   const center: [number, number] =
     locations.length > 0 ? [locations[0].latitude, locations[0].longitude] : [1.3521, 103.8198];
@@ -78,16 +86,25 @@ export function MapCard() {
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-xl animate-in fade-in duration-200">
+      <div
+        className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-xl animate-in fade-in duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="map-dialog-title"
+      >
         <header className="pointer-events-none absolute top-0 z-[1000] flex w-full items-center justify-between bg-gradient-to-b from-black/80 to-transparent p-4">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80 pointer-events-auto">
+          <h2
+            id="map-dialog-title"
+            className="pointer-events-auto flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80"
+          >
             <LocationIcon className="h-3 w-3" />
             <span>Map Overview</span>
-          </div>
+          </h2>
           <button
+            ref={closeButtonRef}
             type="button"
             aria-label="Close map"
-            onClick={() => setIsFullscreen(false)}
+            onClick={closeFullscreen}
             className="pointer-events-auto rounded-full bg-white/10 p-2 text-white/80 hover:bg-white/20 backdrop-blur-md transition-colors"
           >
             <CloseIcon className="h-5 w-5" />
@@ -102,6 +119,14 @@ export function MapCard() {
           >
             {mapContent}
           </MapContainer>
+          <ul className="sr-only" aria-label="Saved weather map locations">
+            {locations.map((location) => {
+              const label =
+                location.weather.area ||
+                `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
+              return <li key={location.id}>{label}</li>;
+            })}
+          </ul>
         </div>
       </div>
     );
@@ -115,8 +140,10 @@ export function MapCard() {
           <span>Map Overview</span>
         </div>
         <button
+          ref={expandButtonRef}
           type="button"
           onClick={() => setIsFullscreen(true)}
+          aria-haspopup="dialog"
           className="rounded-full border border-white/15 bg-white/[0.08] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/[0.16] hover:text-white"
         >
           Expand map

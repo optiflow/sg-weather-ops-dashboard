@@ -43,7 +43,15 @@ List saved locations ordered by `created_at` descending, then `id` descending.
       "latitude": 1.35,
       "longitude": 103.85,
       "created_at": "2026-05-04T12:00:00",
-      "weather": { "condition": "Cloudy", "area": "Bishan", "..." : "..." }
+      "weather": {
+        "condition": "Cloudy",
+        "area": "Bishan",
+        "data_quality": {
+          "status": "complete",
+          "last_refreshed_at": "2026-05-04T12:00:02.000Z",
+          "unavailable_signals": []
+        }
+      }
     }
   ]
 }
@@ -111,7 +119,7 @@ Create or select a location from browser-derived coordinates. The backend valida
 
 If the matched forecast-area coordinate already exists, the endpoint is idempotent and returns `200 OK` with the existing location and `"created": false`.
 
-If the weather refresh fails after a new canonical area is saved, the endpoint still returns `201 Created` with the saved location and default weather (`condition: "Not refreshed"`).
+If the weather refresh fails after a new canonical area is saved, the endpoint still returns `201 Created` with the saved location and default weather (`condition: "Not refreshed"`, `weather.data_quality.status: "not_refreshed"`). The matched forecast-area name is still persisted on `weather.area`.
 
 ---
 
@@ -207,6 +215,32 @@ interface Location {
 ### `WeatherSnapshot`
 
 ```ts
+type RefreshStatus =
+  | 'unknown'
+  | 'not_refreshed'
+  | 'complete'
+  | 'partial'
+  | 'unavailable';
+
+type WeatherSignal =
+  | 'two_hour_forecast'
+  | 'air_temperature'
+  | 'relative_humidity'
+  | 'rainfall'
+  | 'wind_speed'
+  | 'wind_direction'
+  | 'uv'
+  | 'psi'
+  | 'pm25'
+  | 'twenty_four_hour_forecast'
+  | 'four_day_forecast';
+
+interface WeatherDataQuality {
+  status: RefreshStatus;
+  last_refreshed_at: string | null;
+  unavailable_signals: WeatherSignal[];
+}
+
 interface WeatherSnapshot {
   condition: string | null;
   observed_at: string | null;
@@ -231,8 +265,19 @@ interface WeatherSnapshot {
     temperature_low_c: number | null;
     temperature_high_c: number | null;
   }>;
+  data_quality: WeatherDataQuality;
 }
 ```
+
+`weather.data_quality.status` uses these meanings:
+
+| Status | Meaning |
+| --- | --- |
+| `unknown` | Legacy or migrated row without a calculated refresh result. |
+| `not_refreshed` | New default row that has not successfully refreshed weather yet. |
+| `complete` | Latest refresh populated every tracked provider signal. |
+| `partial` | Latest refresh populated at least one signal and missed at least one signal. |
+| `unavailable` | Latest refresh did not produce any usable tracked signal. |
 
 ## Error Format
 

@@ -4,7 +4,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { and, desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migrate } from 'drizzle-orm/sqlite-proxy/migrator';
-import { locations, type WeatherSnapshot } from './schema.js';
+import {
+  locations,
+  type RefreshStatus,
+  type WeatherDataQuality,
+  type WeatherSignal,
+  type WeatherSnapshot,
+} from './schema.js';
 
 export interface LocationRecord {
   id: number;
@@ -35,7 +41,40 @@ const defaultWeather: WeatherSnapshot = {
   air_quality_region: null,
   forecast_periods: [],
   daily_forecast: [],
+  data_quality: {
+    status: 'not_refreshed',
+    last_refreshed_at: null,
+    unavailable_signals: [],
+  },
 };
+
+const unknownDataQuality: WeatherDataQuality = {
+  status: 'unknown',
+  last_refreshed_at: null,
+  unavailable_signals: [],
+};
+
+const refreshStatuses = new Set<RefreshStatus>([
+  'unknown',
+  'not_refreshed',
+  'complete',
+  'partial',
+  'unavailable',
+]);
+
+const weatherSignals = new Set<WeatherSignal>([
+  'two_hour_forecast',
+  'air_temperature',
+  'relative_humidity',
+  'rainfall',
+  'wind_speed',
+  'wind_direction',
+  'uv',
+  'psi',
+  'pm25',
+  'twenty_four_hour_forecast',
+  'four_day_forecast',
+]);
 
 const databasePath = process.env.DATABASE_PATH ?? join(process.cwd(), 'backend', 'weather.db');
 mkdirSync(dirname(databasePath), { recursive: true });
@@ -164,6 +203,7 @@ function weatherToColumns(weather: WeatherSnapshot) {
     airQualityRegion: weather.air_quality_region,
     forecastPeriods: weather.forecast_periods,
     dailyForecast: weather.daily_forecast,
+    dataQuality: normalizeDataQuality(weather.data_quality),
   };
 }
 
@@ -192,7 +232,30 @@ function rowToRecord(row: LocationRow): LocationRecord {
       air_quality_region: row.airQualityRegion,
       forecast_periods: row.forecastPeriods,
       daily_forecast: row.dailyForecast,
+      data_quality: normalizeDataQuality(row.dataQuality),
     },
+  };
+}
+
+function normalizeDataQuality(value: unknown): WeatherDataQuality {
+  if (!value || typeof value !== 'object') return unknownDataQuality;
+
+  const candidate = value as Partial<WeatherDataQuality>;
+  const status = refreshStatuses.has(candidate.status as RefreshStatus)
+    ? (candidate.status as RefreshStatus)
+    : unknownDataQuality.status;
+  const lastRefreshedAt =
+    typeof candidate.last_refreshed_at === 'string' ? candidate.last_refreshed_at : null;
+  const unavailableSignals = Array.isArray(candidate.unavailable_signals)
+    ? candidate.unavailable_signals.filter((signal): signal is WeatherSignal =>
+        weatherSignals.has(signal as WeatherSignal),
+      )
+    : [];
+
+  return {
+    status,
+    last_refreshed_at: lastRefreshedAt,
+    unavailable_signals: unavailableSignals,
   };
 }
 

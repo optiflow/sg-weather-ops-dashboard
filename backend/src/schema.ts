@@ -1,4 +1,26 @@
+import { sql } from 'drizzle-orm';
 import { integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+
+export type RefreshStatus = 'unknown' | 'not_refreshed' | 'complete' | 'partial' | 'unavailable';
+
+export type WeatherSignal =
+  | 'two_hour_forecast'
+  | 'air_temperature'
+  | 'relative_humidity'
+  | 'rainfall'
+  | 'wind_speed'
+  | 'wind_direction'
+  | 'uv'
+  | 'psi'
+  | 'pm25'
+  | 'twenty_four_hour_forecast'
+  | 'four_day_forecast';
+
+export interface WeatherDataQuality {
+  status: RefreshStatus;
+  last_refreshed_at: string | null;
+  unavailable_signals: WeatherSignal[];
+}
 
 export interface WeatherSnapshot {
   condition: string | null;
@@ -27,6 +49,7 @@ export interface WeatherSnapshot {
     temperature_low_c: number | null;
     temperature_high_c: number | null;
   }>;
+  data_quality: WeatherDataQuality;
 }
 
 export const locations = sqliteTable(
@@ -58,6 +81,10 @@ export const locations = sqliteTable(
     dailyForecast: text('daily_forecast', { mode: 'json' })
       .$type<WeatherSnapshot['daily_forecast']>()
       .notNull(),
+    dataQuality: text('data_quality', { mode: 'json' })
+      .$type<WeatherDataQuality>()
+      .notNull()
+      .default(sql`'{"status":"unknown","last_refreshed_at":null,"unavailable_signals":[]}'`),
   },
   (table) => [
     uniqueIndex('locations_latitude_longitude_unique').on(table.latitude, table.longitude),

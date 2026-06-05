@@ -30,6 +30,11 @@ const weather: WeatherSnapshot = {
   daily_forecast: [
     { date: '2026-05-04', forecast: 'Cloudy', temperature_low_c: 25, temperature_high_c: 32 },
   ],
+  data_quality: {
+    status: 'complete',
+    last_refreshed_at: '2026-05-04T00:00:01Z',
+    unavailable_signals: [],
+  },
 };
 
 const bishanArea: TwoHourForecastArea = {
@@ -104,6 +109,11 @@ describe('locations API', () => {
         condition: 'Cloudy',
         area: 'Bishan',
         temperature_c: 29,
+        data_quality: {
+          status: 'complete',
+          last_refreshed_at: '2026-05-04T00:00:01Z',
+          unavailable_signals: [],
+        },
       },
     });
 
@@ -148,6 +158,11 @@ describe('locations API', () => {
       weather: {
         condition: 'Not refreshed',
         area: null,
+        data_quality: {
+          status: 'not_refreshed',
+          last_refreshed_at: null,
+          unavailable_signals: [],
+        },
       },
     });
     expect(weatherRequests).toEqual([{ latitude: 1.35, longitude: 103.85 }]);
@@ -174,6 +189,9 @@ describe('locations API', () => {
           condition: 'Cloudy',
           area: 'Bishan',
           temperature_c: 29,
+          data_quality: {
+            status: 'complete',
+          },
         },
       },
     });
@@ -293,7 +311,12 @@ describe('locations API', () => {
         longitude: bishanArea.longitude,
         weather: {
           condition: 'Not refreshed',
-          area: null,
+          area: 'Bishan',
+          data_quality: {
+            status: 'not_refreshed',
+            last_refreshed_at: null,
+            unavailable_signals: [],
+          },
         },
       },
     });
@@ -301,6 +324,8 @@ describe('locations API', () => {
     const listResponse = await request(app).get('/api/locations').expect(200);
     expect(listResponse.body.locations).toHaveLength(1);
     expect(listResponse.body.locations[0].weather.condition).toBe('Not refreshed');
+    expect(listResponse.body.locations[0].weather.area).toBe('Bishan');
+    expect(listResponse.body.locations[0].weather.data_quality.status).toBe('not_refreshed');
   });
 
   it('rejects coordinates that are not finite JSON numbers', async () => {
@@ -393,6 +418,9 @@ describe('locations API', () => {
         condition: 'Showers',
         observed_at: '2026-05-04T01:00:00Z',
         temperature_c: 27,
+        data_quality: {
+          status: 'complete',
+        },
       },
     });
     expect(weatherRequests).toEqual([

@@ -80,7 +80,7 @@ The backend:
 4. Returns the existing saved location if that canonical area coordinate is already present.
 5. Otherwise saves the canonical area coordinate, refreshes weather, and returns `{ location, created, matched_area }`.
 
-If the weather refresh fails after the canonical area is saved, the location still remains saved with default weather and can be refreshed later.
+If the weather refresh fails after the canonical area is saved, the location still remains saved with default weather, `weather.area` is set to the matched forecast-area name, and `weather.data_quality.status` remains `not_refreshed`.
 
 ```mermaid
 sequenceDiagram
@@ -109,7 +109,7 @@ sequenceDiagram
     API-->>Store: 201 Created + new location
   end
   Store->>API: GET /api/locations
-  Store-->>UI: Status message + selected location
+  Store-->>UI: Local status message + selected location
 ```
 
 Local development normally works on `localhost` and `*.localhost` origins. If your browser blocks geolocation over HTTP, run the dev server with `PORTLESS_HTTPS=1 npm run dev`.
@@ -126,6 +126,8 @@ Browser-derived locations are canonicalized to the matched forecast-area coordin
 
 The app selects the existing location instead of creating a duplicate.
 
+`UseMyLocationButton` keeps browser geolocation status local to the button. It distinguishes added, duplicate, partial weather, unavailable weather, not-refreshed weather, and browser permission/error outcomes.
+
 ## Refreshing Weather
 
 Click the **Refresh** button on a location's detail view. This calls `POST /api/locations/:id/refresh`, which:
@@ -135,11 +137,11 @@ Click the **Refresh** button on a location's detail view. This calls `POST /api/
 3. Updates the weather columns in the database.
 4. Returns the updated location.
 
-Individual provider failures can still produce a partial or `Unavailable` snapshot. If the weather client rejects outside that settled endpoint flow, the endpoint returns `502 Bad Gateway`.
+Individual provider failures can still produce a partial or `Unavailable` snapshot. The response includes `weather.data_quality`, which the UI renders in the Data Trust strip. If the weather client rejects outside that settled endpoint flow, the endpoint returns `502 Bad Gateway`.
 
 ## Deleting a Location
 
-Hover a sidebar card and click its delete control. The frontend calls `DELETE /api/locations/:id`, then reloads the list. If the deleted location was selected, the store selects the first remaining location or clears the selection when none remain.
+Hover a sidebar card and click its delete control. The card asks for inline confirmation before the frontend calls `DELETE /api/locations/:id`, then reloads the list. If the deleted location was selected, the store selects the first remaining location or clears the selection when none remain.
 
 Missing locations return `404` with:
 
@@ -149,7 +151,7 @@ Missing locations return `404` with:
 
 ## Searching Locations
 
-The sidebar search box filters the list by area name or weather condition. This is a frontend-only filter — no API call is made.
+The sidebar search box is labeled **Search saved locations** for assistive technology. It filters the list by area name or weather condition. This is a frontend-only filter, so no API call is made.
 
 ## Location State in the Frontend
 

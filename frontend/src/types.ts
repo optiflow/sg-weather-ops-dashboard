@@ -12,6 +12,27 @@ export interface DailyForecast {
   temperature_high_c: number | null;
 }
 
+export type RefreshStatus = 'unknown' | 'not_refreshed' | 'complete' | 'partial' | 'unavailable';
+
+export type WeatherSignal =
+  | 'two_hour_forecast'
+  | 'air_temperature'
+  | 'relative_humidity'
+  | 'rainfall'
+  | 'wind_speed'
+  | 'wind_direction'
+  | 'uv'
+  | 'psi'
+  | 'pm25'
+  | 'twenty_four_hour_forecast'
+  | 'four_day_forecast';
+
+export interface WeatherDataQuality {
+  status: RefreshStatus;
+  last_refreshed_at: string | null;
+  unavailable_signals: WeatherSignal[];
+}
+
 export interface WeatherSnapshot {
   condition: string | null;
   observed_at: string | null;
@@ -31,6 +52,7 @@ export interface WeatherSnapshot {
   air_quality_region: string | null;
   forecast_periods: ForecastPeriod[];
   daily_forecast: DailyForecast[];
+  data_quality: WeatherDataQuality;
 }
 
 export interface Location {

@@ -8,6 +8,7 @@ Run all commands from the **root directory**.
 - `npm run build`: Builds both frontend and backend workspaces.
 - `npm run start`: Starts the production server.
 - `npm run docs`: Starts the Astro Starlight documentation site at `http://localhost:4321`.
+- `npm run docs:build`: Builds the Astro Starlight documentation site.
 
 ## Testing & Quality
 
@@ -19,11 +20,12 @@ Run all commands from the **root directory**.
 - `npx playwright install`: Installs browser binaries required by Playwright.
 - `npx --no-install lefthook validate`: Validates the Git hook configuration.
 
-Before finishing code changes, run the core project quality gate from the root:
+Before finishing code or documentation changes, run the core project quality gate from the root:
 
 ```bash
 npm test
 npm run build
+npm run docs:build
 npm run lint
 ```
 

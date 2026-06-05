@@ -28,9 +28,13 @@ export function Sidebar() {
   return (
     <aside className="flex max-h-[62vh] w-full shrink-0 flex-col gap-3 border-b border-white/5 bg-black/20 p-4 pt-16 backdrop-blur-2xl md:h-full md:max-h-none md:min-h-0 md:w-[22rem] md:border-b-0 md:border-r md:pt-4">
       <div className="relative">
+        <label htmlFor="location-search" className="sr-only">
+          Search saved locations
+        </label>
         <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
         <input
-          type="text"
+          id="location-search"
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"
@@ -60,13 +64,7 @@ export function Sidebar() {
             No locations yet. Add one above.
           </p>
         ) : (
-          filtered.map((location) => (
-            <SidebarCard
-              key={location.id}
-              location={location}
-              isHome={location.id === locations[0].id}
-            />
-          ))
+          filtered.map((location) => <SidebarCard key={location.id} location={location} />)
         )}
       </div>
     </aside>

@@ -7,6 +7,7 @@
     "prepare": "lefthook install",
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w frontend && tsc -p backend/tsconfig.json",
+    "docs:build": "npm run build -w docs",
     "start": "node scripts/start.mjs",
     "doctor": "node scripts/doctor.mjs",
     "reset": "node scripts/reset.mjs",
@@ -18,7 +19,7 @@
     "test:e2e": "playwright test",
     "test:watch": "NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "tsx backend/src/migrate.ts"
   },
   "workspaces": [
     "frontend",

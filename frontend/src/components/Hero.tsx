@@ -1,13 +1,15 @@
 import { useSelectedLocation, useStore } from '../state/store';
+import { DataTrustStrip } from './DataTrustStrip';
 import { formatTemperature, formatTime } from './format';
 import { HourlyStrip } from './HourlyStrip';
-import { LocationIcon, RefreshIcon } from './icons';
+import { RefreshIcon } from './icons';
 import { MapCard } from './MapCard';
+import { RiskBrief } from './RiskBrief';
 import { TenDayForecast } from './TenDayForecast';
 import { TileGrid } from './Tiles';
 
 export function Hero() {
-  const { locations, refresh, refreshingId } = useStore();
+  const { refresh, refreshingId } = useStore();
   const selected = useSelectedLocation();
 
   if (!selected) {
@@ -25,7 +27,6 @@ export function Hero() {
     );
   }
 
-  const isHome = locations[0]?.id === selected.id;
   const area =
     selected.weather?.area || `${selected.latitude.toFixed(3)}, ${selected.longitude.toFixed(3)}`;
   const condition = selected.weather?.condition || 'Conditions unavailable';
@@ -41,12 +42,6 @@ export function Hero() {
     <main className="min-w-0 flex-1 overflow-y-auto">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 p-4 pt-14 sm:p-6 md:pt-6 lg:p-8">
         <header className="flex flex-col items-center pb-2 pt-4 text-center md:pt-6">
-          {isHome && (
-            <div className="mb-2 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
-              <LocationIcon className="h-3 w-3" />
-              <span>Home</span>
-            </div>
-          )}
           <h1 className="text-3xl font-light leading-tight text-white sm:text-4xl">{area}</h1>
           <div className="mt-2 text-6xl font-extralight leading-none tracking-tight text-white sm:text-[6.5rem]">
             {temperature}
@@ -62,6 +57,8 @@ export function Hero() {
           <p className="px-2 pb-1 text-center text-xs text-white/65">{validPeriod}</p>
         )}
 
+        <RiskBrief area={area} weather={selected.weather} />
+        <DataTrustStrip weather={selected.weather} />
         <HourlyStrip periods={selected.weather?.forecast_periods} />
         <TenDayForecast weather={selected.weather} />
         <MapCard />

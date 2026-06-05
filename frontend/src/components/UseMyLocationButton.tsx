@@ -4,7 +4,7 @@ import { useStore } from '../state/store';
 import { LocationIcon } from './icons';
 
 type Status = {
-  type: 'success' | 'error';
+  type: 'success' | 'warning' | 'error';
   message: string;
 };
 
@@ -19,11 +19,20 @@ export function UseMyLocationButton() {
     try {
       const position = await getBrowserPosition();
       const result = await createFromPosition(position);
+      const quality = result.location.weather.data_quality;
+      const area = result.matched_area.name;
+      const warning =
+        quality.status === 'not_refreshed' || result.location.weather.condition === 'Not refreshed'
+          ? `Added ${area}, but weather is not refreshed yet.`
+          : quality.status === 'partial'
+            ? `Added ${area} with partial weather data.`
+            : quality.status === 'unavailable'
+              ? `Added ${area}, but weather data is unavailable right now.`
+              : null;
+      const isWarning = result.created && Boolean(warning);
       setStatus({
-        type: 'success',
-        message: result.created
-          ? `Added ${result.matched_area.name}.`
-          : `${result.matched_area.name} was already saved.`,
+        type: isWarning ? 'warning' : 'success',
+        message: result.created ? (warning ?? `Added ${area}.`) : `${area} was already saved.`,
       });
     } catch (err) {
       setStatus({
@@ -50,7 +59,11 @@ export function UseMyLocationButton() {
         <p
           aria-live="polite"
           className={`status-message ${
-            status.type === 'error' ? 'status-message-error' : 'status-message-success'
+            status.type === 'error'
+              ? 'status-message-error'
+              : status.type === 'warning'
+                ? 'status-message-warning'
+                : 'status-message-success'
           }`}
         >
           {status.message}

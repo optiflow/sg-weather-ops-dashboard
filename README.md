@@ -45,6 +45,7 @@ Before finishing changes, run the root quality gate:
 ```bash
 npm test
 npm run build
+npm run docs:build
 npm run lint
 ```
 
@@ -55,7 +56,7 @@ npm run lint
 - Lists, selects, refreshes, and deletes saved locations.
 - Stores one latest weather snapshot per location in `backend/weather.db`.
 - Shows 2-hour forecast text, realtime temperature, humidity, rainfall, wind, UV, air quality, 24-hour forecast periods, and a 4-day outlook.
-- Renders a responsive React dashboard with a sidebar, selected-location hero, weather metric tiles, theme switching, and a Leaflet map.
+- Renders a responsive React dashboard with a sidebar, selected-location hero, Weather Risk Brief, Data Trust strip, weather metric tiles, theme switching, and a Leaflet map.
 - Keeps detailed architecture, API, schema, component, and configuration docs in the `docs/` workspace.
 
 ## Tech Stack
@@ -93,6 +94,7 @@ Run commands from the repository root.
 | --- | --- |
 | `npm run dev` | Start the full app through Portless. |
 | `npm run docs` | Start the Astro Starlight docs site. |
+| `npm run docs:build` | Build the Astro Starlight docs site. |
 | `npm test` | Run Vitest and Supertest backend tests. |
 | `npm run test:e2e` | Run the Playwright smoke test. |
 | `npm run test:watch` | Run tests in watch mode. |
@@ -157,7 +159,7 @@ export WEATHER_API_KEY=your_api_key_here
 npm run dev
 ```
 
-The weather client aggregates 2-hour forecast data, realtime station readings, UV, air quality, 24-hour forecast periods, and the 4-day outlook. Provider details live in [Weather Data](docs/src/content/docs/guides/weather-data.md).
+The weather client aggregates 2-hour forecast data, realtime station readings, UV, air quality, 24-hour forecast periods, and the 4-day outlook. Each snapshot includes `weather.data_quality` so the UI can distinguish unrefreshed, complete, partial, and unavailable refresh results. Provider details live in [Weather Data](docs/src/content/docs/guides/weather-data.md).
 
 ## Future Ideas
 

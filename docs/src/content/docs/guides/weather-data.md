@@ -86,12 +86,39 @@ The backend and frontend share the same JSON field names for `WeatherSnapshot`:
 | Regional and national readings | `uv_index`, `psi_twenty_four_hourly`, `pm25_one_hourly`, `air_quality_region` |
 | 24-hour forecast | `forecast_low_c`, `forecast_high_c`, `forecast_periods[]` |
 | 4-day forecast | `daily_forecast[]` |
+| Data trust | `data_quality.status`, `data_quality.last_refreshed_at`, `data_quality.unavailable_signals[]` |
 
-The database stores scalar fields as SQLite columns and stores `forecast_periods` and `daily_forecast` as JSON text columns through Drizzle's typed JSON mode.
+The database stores scalar fields as SQLite columns and stores `forecast_periods`, `daily_forecast`, and `data_quality` as JSON text columns through Drizzle's typed JSON mode.
+
+## Data Quality Contract
+
+Each persisted snapshot includes `weather.data_quality`:
+
+```ts
+type RefreshStatus = 'unknown' | 'not_refreshed' | 'complete' | 'partial' | 'unavailable';
+
+interface WeatherDataQuality {
+  status: RefreshStatus;
+  last_refreshed_at: string | null;
+  unavailable_signals: WeatherSignal[];
+}
+```
+
+The statuses mean:
+
+| Status | When it appears |
+| --- | --- |
+| `unknown` | Legacy rows migrated before refresh quality was tracked. |
+| `not_refreshed` | Newly inserted default weather before any successful provider refresh. |
+| `complete` | Every tracked provider signal returned a usable value or payload. |
+| `partial` | At least one tracked signal was usable and at least one was unavailable. |
+| `unavailable` | No tracked provider signal was usable in the refresh attempt. |
+
+Tracked signals are the 2-hour forecast, temperature, humidity, rainfall, wind speed, wind direction, UV, PSI, PM2.5, 24-hour forecast, and 4-day forecast.
 
 ## Partial Failures
 
-Each API call is wrapped in a `settle` helper that catches errors individually. If one endpoint fails, the remaining data is still included in the snapshot — failed fields are set to `null`. This means the dashboard always renders; individual tiles simply show `--` when data is unavailable.
+Each API call is settled individually. If one endpoint fails, the remaining data is still included in the snapshot, failed fields are set to `null`, and the missing signal is recorded in `data_quality.unavailable_signals`. This means the dashboard always renders; individual tiles simply show `--` when data is unavailable.
 
 The first 2-hour forecast response supplies the base snapshot. If that forecast fails, the client starts from an `Unavailable` snapshot and still attempts the remaining readings.
 
@@ -115,6 +142,17 @@ The route behavior depends on where the failure occurs:
 | Browser-position create after saving matched area | Keeps the new canonical location with default weather and returns `201`. |
 | Manual refresh | Persists partial or `Unavailable` snapshots for settled endpoint failures. Returns `502` only when the weather client rejects outside that settled endpoint flow. |
 
+## Weather Risk Brief
+
+The Weather Risk Brief is a pure frontend interpretation of the latest `WeatherSnapshot`; it does not call a new provider and does not persist a separate risk score. `frontend/src/weatherRisk.ts` derives `Low`, `Moderate`, `High`, or `Unavailable` from:
+
+- Rain/storm forecast text and rainfall.
+- UV, PSI, PM2.5, wind speed, and heat indicators.
+- Stale observations.
+- Missing or unavailable provider signals from `data_quality`.
+
+The brief is decision-support copy for the dashboard. It is not a production alerting system and should not replace official safety advisories.
+
 ## Rendering Data
 
 The frontend renders snapshot fields in these components:
@@ -122,6 +160,8 @@ The frontend renders snapshot fields in these components:
 | Component | Data used |
 | --- | --- |
 | `Hero` | Area, temperature, condition, high/low, observed time, source, refresh action. |
+| `RiskBrief` | Latest snapshot metrics plus `data_quality` to derive the frontend risk level and drivers. |
+| `DataTrustStrip` | `data_quality.status`, `last_refreshed_at`, missing signals, and observation time. |
 | `HourlyStrip` | `forecast_periods` from the 24-hour regional forecast. |
 | `TenDayForecast` | `daily_forecast`; the current provider returns 4 days. |
 | `MapCard` | Saved coordinates and temperature/condition markers on Leaflet. |

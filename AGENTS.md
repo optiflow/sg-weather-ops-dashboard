@@ -41,7 +41,7 @@ Treat local files as the source of truth before editing or making final claims.
 ## Project Constraints
 
 - Use npm workspaces from the repository root. Do not introduce another package manager or ignore `package-lock.json`.
-- Use Biome 2.0.6 as the linter and formatter: `npm run lint`, `npm run format`.
+- Use Biome 2.4.16 as the linter and formatter: `npm run lint`, `npm run format`.
 - Keep TypeScript strict in both workspaces.
 - Backend imports use NodeNext rules with `.js` extensions for local emitted modules.
 - Frontend imports use Vite/Bundler resolution.
@@ -76,6 +76,7 @@ Run commands from the repository root.
 | `npm run test:e2e` | Run the Playwright smoke test. |
 | `npm run test:watch` | Run tests in watch mode. |
 | `npm run build` | Build frontend and compile backend TypeScript. |
+| `npm run docs:build` | Build the Astro Starlight docs site. |
 | `npm run lint` | Run Biome checks. |
 | `npm run format` | Format with Biome. |
 | `npm run db:generate` | Generate Drizzle migrations. |
@@ -88,6 +89,7 @@ Required quality gate before completing code or documentation changes when feasi
 ```bash
 npm test
 npm run build
+npm run docs:build
 npm run lint
 ```
 

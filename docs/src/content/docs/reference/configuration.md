@@ -27,13 +27,14 @@ Defined in the root `package.json`:
 | `build` | `npm run build -w frontend && tsc -p backend/tsconfig.json` | Build both workspaces |
 | `start` | `node scripts/start.mjs` | Start production server |
 | `docs` | `npm run dev -w docs` | Start Starlight docs site |
+| `docs:build` | `npm run build -w docs` | Build Starlight docs site |
 | `test` | `NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest run` | Run test suite |
 | `test:watch` | `NODE_OPTIONS=--disable-warning=ExperimentalWarning vitest` | Run tests in watch mode |
 | `lint` | `biome check .` | Lint and format check with Biome |
 | `lint:ci` | `biome ci .` | Biome check for CI |
 | `format` | `biome format --write .` | Format with Biome |
 | `db:generate` | `drizzle-kit generate` | Generate Drizzle migrations |
-| `db:migrate` | `drizzle-kit migrate` | Apply Drizzle migrations |
+| `db:migrate` | `tsx backend/src/migrate.ts` | Apply Drizzle migrations |
 | `doctor` | `node scripts/doctor.mjs` | Troubleshoot local state |
 | `reset` | `node scripts/reset.mjs` | Clean local state |
 
@@ -89,7 +90,7 @@ Configured in `drizzle.config.ts` at the project root:
 
 ## Biome
 
-Uses `biome.json` at the root for both linting and formatting:
+Uses Biome 2.4.16 through `biome.json` at the root for both linting and formatting:
 
 - Replaces both ESLint and Prettier
 - Includes React hook rules
@@ -104,7 +105,7 @@ Lefthook is installed through the root `prepare` script. The hooks are full-repo
 
 On a fresh clone, run `npx playwright install` before expecting the Playwright smoke test or Lefthook `pre-push` hook to pass locally.
 
-The GitHub Actions quality workflow installs dependencies with `npm ci`, installs the Chromium browser used by Playwright, then runs Vitest, the production build, Biome CI, and the Playwright smoke test.
+The GitHub Actions quality workflow installs dependencies with `npm ci`, installs the Chromium browser used by Playwright, then runs Vitest, the production build, the docs build, Biome CI, and the Playwright smoke test.
 
 ## Astro Starlight Docs
 

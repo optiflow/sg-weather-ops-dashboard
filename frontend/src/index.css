@@ -19,6 +19,9 @@ body {
   --status-success-bg: rgba(16, 185, 129, 0.16);
   --status-success-border: rgba(110, 231, 183, 0.34);
   --status-success-text: #d1fae5;
+  --status-warning-bg: rgba(245, 158, 11, 0.18);
+  --status-warning-border: rgba(252, 211, 77, 0.38);
+  --status-warning-text: #fef3c7;
   background-attachment: fixed;
   background-repeat: no-repeat;
   transition:
@@ -47,6 +50,9 @@ body.theme-cotton-candy {
   --status-success-bg: rgba(209, 250, 229, 0.88);
   --status-success-border: rgba(5, 150, 105, 0.36);
   --status-success-text: #065f46;
+  --status-warning-bg: rgba(254, 243, 199, 0.9);
+  --status-warning-border: rgba(217, 119, 6, 0.38);
+  --status-warning-text: #92400e;
   background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
   font-family: "Quicksand", sans-serif;
 }
@@ -120,6 +126,9 @@ body.theme-terminal {
   --status-success-bg: rgba(20, 83, 45, 0.24);
   --status-success-border: rgba(74, 222, 128, 0.55);
   --status-success-text: #86efac;
+  --status-warning-bg: rgba(120, 53, 15, 0.24);
+  --status-warning-border: rgba(251, 191, 36, 0.55);
+  --status-warning-text: #fcd34d;
   background: #000000;
   font-family: "Fira Code", monospace;
 }
@@ -166,6 +175,12 @@ select:focus-visible {
   background: var(--status-success-bg);
   border-color: var(--status-success-border);
   color: var(--status-success-text);
+}
+
+.status-message-warning {
+  background: var(--status-warning-bg);
+  border-color: var(--status-warning-border);
+  color: var(--status-warning-text);
 }
 
 ::-webkit-scrollbar {

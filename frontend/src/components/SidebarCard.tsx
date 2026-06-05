@@ -1,15 +1,16 @@
+import { useState } from 'react';
 import { useStore } from '../state/store';
 import type { Location } from '../types';
 import { formatTemperature, formatTime } from './format';
-import { CloseIcon, CloudIcon, HomeIcon } from './icons';
+import { CloseIcon, CloudIcon } from './icons';
 
 interface SidebarCardProps {
   location: Location;
-  isHome: boolean;
 }
 
-export function SidebarCard({ location, isHome }: SidebarCardProps) {
+export function SidebarCard({ location }: SidebarCardProps) {
   const { selectedId, select, remove } = useStore();
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const isSelected = selectedId === location.id;
   const observed = formatTime(location.weather.observed_at);
   const area =
@@ -40,14 +41,7 @@ export function SidebarCard({ location, isHome }: SidebarCardProps) {
           <div className="min-w-0">
             <div className="truncate text-lg font-semibold leading-tight text-white">{area}</div>
             <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/70">
-              {isHome ? (
-                <>
-                  <span>My Location</span>
-                  <span className="text-white/40">·</span>
-                  <HomeIcon className="h-3 w-3" />
-                  <span>Home</span>
-                </>
-              ) : observed ? (
+              {observed ? (
                 <span>{observed}</span>
               ) : (
                 <span className="text-white/50">Not refreshed</span>
@@ -66,14 +60,34 @@ export function SidebarCard({ location, isHome }: SidebarCardProps) {
           </div>
         </div>
       </button>
-      <button
-        type="button"
-        onClick={() => void remove(location.id)}
-        className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/10 text-white/55 opacity-100 transition hover:bg-white/10 hover:text-white md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
-        aria-label={`Delete ${area}`}
-      >
-        <CloseIcon className="h-3 w-3" />
-      </button>
+      {isConfirmingDelete ? (
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-black/40 p-1 backdrop-blur-xl">
+          <button
+            type="button"
+            onClick={() => setIsConfirmingDelete(false)}
+            className="rounded-full px-2 py-1 text-[10px] font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void remove(location.id)}
+            className="rounded-full bg-red-400/90 px-2 py-1 text-[10px] font-semibold text-white hover:bg-red-300"
+            aria-label={`Confirm delete ${area}`}
+          >
+            Delete
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsConfirmingDelete(true)}
+          className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/10 text-white/55 opacity-100 transition hover:bg-white/10 hover:text-white md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+          aria-label={`Delete ${area}`}
+        >
+          <CloseIcon className="h-3 w-3" />
+        </button>
+      )}
     </div>
   );
 }

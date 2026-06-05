@@ -17,4 +17,27 @@ The `sg-weather-ops-dashboard` project is a monorepo managed via npm workspaces.
 
 - **`docs/`**: An Astro Starlight documentation site.
   - **Tooling**: Astro + `@astrojs/starlight`
-  - **Command**: `npm run docs` starts the dev server on port 4321.
+  - **Commands**: `npm run docs` starts the dev server on port 4321; `npm run docs:build` builds the static docs site.
+
+## Runtime Flow
+
+```mermaid
+flowchart LR
+  Browser["Browser\nReact dashboard"] --> Express["Express server\nAPI + Vite middleware"]
+  Express --> Routes["locations routes"]
+  Routes --> Weather["SingaporeWeatherClient"]
+  Routes --> Db["SQLite via Drizzle"]
+  Weather --> Gov["data.gov.sg weather APIs"]
+  Db --> Routes
+  Routes --> Browser
+```
+
+In development, the root `npm run dev` command starts Express with Vite middleware through Portless, so the frontend can call relative `/api` routes. In production, the compiled backend serves `frontend/dist` as static SPA assets.
+
+## Snapshot Model
+
+The app stores one latest weather snapshot on each `locations` row. A location is inserted with default `not_refreshed` weather, then create and refresh flows attempt to replace that default snapshot with provider data.
+
+`WeatherSnapshot` includes `data_quality`, which records the refresh status, refresh time, and unavailable provider signals. Legacy rows and migration defaults use `unknown`; new default rows use `not_refreshed`; provider refreshes classify the result as `complete`, `partial`, or `unavailable`.
+
+The frontend treats the persisted snapshot as the source of truth. `DataTrustStrip` renders `data_quality` directly, while `RiskBrief` derives a lightweight decision-support summary from the same snapshot fields plus stale/missing-signal checks. There is no separate risk table, alert provider, or historical time-series model.

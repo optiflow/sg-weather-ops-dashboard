@@ -101,13 +101,14 @@ The repository also includes `frontend/.env.local.example` for a standalone Vite
 | `npm run db:generate` | Generates Drizzle migrations after schema changes. |
 | `npm run db:migrate` | Applies Drizzle migrations. |
 | `npm run docs` | Starts the Astro Starlight docs site. |
+| `npm run docs:build` | Builds the Astro Starlight docs site. |
 
 ## Tests and Quality Gate
 
 Run the focused docs build after editing documentation:
 
 ```bash
-npm run build -w docs
+npm run docs:build
 ```
 
 Before completing a code or documentation task, run the root quality gate:
@@ -115,6 +116,7 @@ Before completing a code or documentation task, run the root quality gate:
 ```bash
 npm test
 npm run build
+npm run docs:build
 npm run lint
 ```
 

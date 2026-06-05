@@ -20,6 +20,8 @@ graph TD
   Sidebar --> UseMyLocationButton
   Sidebar --> AddLocationForm
   Sidebar --> SidebarCard["SidebarCard ×N"]
+  Hero --> RiskBrief
+  Hero --> DataTrustStrip
   Hero --> HourlyStrip
   Hero --> TenDayForecast
   Hero --> MapCard
@@ -93,7 +95,15 @@ The API helper treats non-JSON backend responses as server-unavailable failures,
 
 ### `Sidebar`
 
-The left panel that lists all locations as `SidebarCard` components. Includes a search input that filters locations by area name or condition (frontend-only filter), a **Use my location** action, and the `AddLocationForm` for manual coordinate entry.
+The left panel that lists all locations as `SidebarCard` components. Includes an accessible search input labeled **Search saved locations** that filters locations by area name or condition, a **Use my location** action, and the `AddLocationForm` for manual coordinate entry.
+
+### `UseMyLocationButton`
+
+Wraps browser geolocation and calls `createFromPosition`. Its status message is local to the button, so permission and browser-position errors do not populate the global sidebar error. Success copy distinguishes newly added, partial, unavailable, not-refreshed, and duplicate forecast-area outcomes.
+
+### `SidebarCard`
+
+Displays area, observation time, condition, temperature, and high/low values for a saved location. Delete uses a lightweight inline confirmation before calling `remove(id)`. The card no longer renders fake **Home** or **My Location** labels; primary-location persistence is out of scope.
 
 ### `Hero`
 
@@ -102,7 +112,17 @@ The main content area showing the selected location's weather. Displays:
 - Area name and current temperature
 - Condition text and high/low forecast
 - Observation timestamp and source
+- `RiskBrief`
+- `DataTrustStrip`
 - A **Refresh** button that triggers `POST /api/locations/:id/refresh`
+
+### `RiskBrief`
+
+Builds a frontend-only risk summary from `frontend/src/weatherRisk.ts`. It derives `Low`, `Moderate`, `High`, or `Unavailable` from weather fields and `weather.data_quality`, then shows the most important drivers.
+
+### `DataTrustStrip`
+
+Shows the persisted refresh status, last refresh time, observation time, and unavailable provider signals from `weather.data_quality`.
 
 ### `HourlyStrip`
 
@@ -114,7 +134,7 @@ Displays `daily_forecast` as a vertical list with daily high/low temperatures an
 
 ### `MapCard`
 
-An interactive Leaflet map showing all saved locations as markers. The normal card disables dragging and scroll zoom; an **Expand map** button opens a fullscreen map, which can be closed with the close button or Escape. `MapBoundsUpdater` fits the map bounds to all saved locations with `useEffect`.
+An interactive Leaflet map showing all saved locations as markers. The normal card disables dragging and scroll zoom; an **Expand map** button opens a fullscreen dialog with focus handling, Escape close, and a screen-reader-only list of saved map locations. `MapBoundsUpdater` fits the map bounds to all saved locations with `useEffect`.
 
 ### `TileGrid`
 

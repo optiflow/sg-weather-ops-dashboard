@@ -155,6 +155,27 @@ export interface TwoHourForecastArea {
   longitude: number;
 }
 
+export type RefreshStatus = 'unknown' | 'not_refreshed' | 'complete' | 'partial' | 'unavailable';
+
+export type WeatherSignal =
+  | 'two_hour_forecast'
+  | 'air_temperature'
+  | 'relative_humidity'
+  | 'rainfall'
+  | 'wind_speed'
+  | 'wind_direction'
+  | 'uv'
+  | 'psi'
+  | 'pm25'
+  | 'twenty_four_hour_forecast'
+  | 'four_day_forecast';
+
+export interface WeatherDataQuality {
+  status: RefreshStatus;
+  last_refreshed_at: string | null;
+  unavailable_signals: WeatherSignal[];
+}
+
 export interface WeatherSnapshot {
   condition: string;
   observed_at: string;
@@ -174,7 +195,32 @@ export interface WeatherSnapshot {
   air_quality_region: string | null;
   forecast_periods: ForecastPeriod[];
   daily_forecast: DailyForecast[];
+  data_quality: WeatherDataQuality;
 }
+
+const weatherSignals: WeatherSignal[] = [
+  'two_hour_forecast',
+  'air_temperature',
+  'relative_humidity',
+  'rainfall',
+  'wind_speed',
+  'wind_direction',
+  'uv',
+  'psi',
+  'pm25',
+  'twenty_four_hour_forecast',
+  'four_day_forecast',
+];
+
+type Settled<T> =
+  | {
+      status: 'fulfilled';
+      value: T;
+    }
+  | {
+      status: 'rejected';
+      reason: unknown;
+    };
 
 export class SingaporeWeatherClient {
   constructor(
@@ -183,81 +229,139 @@ export class SingaporeWeatherClient {
       apiKey?: string;
       timeoutMs?: number;
       userAgent?: string;
+      now?: () => Date;
     } = {},
   ) {}
 
   async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot> {
-    const settle = async <T>(promise: Promise<T>) => {
+    const [
+      forecastPayload,
+      airTemp,
+      relativeHumidity,
+      rainfall,
+      windSpeed,
+      windDirection,
+      uvIndex,
+      airQuality,
+      twentyFourHour,
+      fourDay,
+    ] = (await runSettled(
+      [
+        () => this.fetchLatestForecastPayload(),
+        () => this.fetchNearestReading('air-temperature', latitude, longitude),
+        () => this.fetchNearestReading('relative-humidity', latitude, longitude),
+        () => this.fetchNearestReading('rainfall', latitude, longitude),
+        () => this.fetchNearestReading('wind-speed', latitude, longitude),
+        () => this.fetchNearestReading('wind-direction', latitude, longitude),
+        () => this.fetchUvIndex(),
+        () => this.fetchAirQuality(latitude, longitude),
+        () => this.fetchTwentyFourHourForecast(latitude, longitude),
+        () => this.fetchFourDayForecast(),
+      ],
+      3,
+    )) as [
+      Settled<ForecastPayload>,
+      Settled<{ value: number | null; timestamp: string | null }>,
+      Settled<{ value: number | null; timestamp: string | null }>,
+      Settled<{ value: number | null; timestamp: string | null }>,
+      Settled<{ value: number | null; timestamp: string | null }>,
+      Settled<{ value: number | null; timestamp: string | null }>,
+      Settled<{ value: number | null; timestamp: string | null }>,
+      Settled<{
+        psi: number | null;
+        pm25: number | null;
+        region: string | null;
+        timestamp: string | null;
+      }>,
+      Settled<{
+        low: number | null;
+        high: number | null;
+        periods: ForecastPeriod[];
+        timestamp: string | null;
+      }>,
+      Settled<{ days: DailyForecast[]; timestamp: string | null }>,
+    ];
+
+    const usableSignals = new Set<WeatherSignal>();
+    const unavailableSignals = new Set<WeatherSignal>();
+    let snapshot = this.emptyForecastSnapshot();
+
+    if (forecastPayload.status === 'fulfilled') {
       try {
-        const value = await promise;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return { status: 'fulfilled' as const, value };
-      } catch (reason) {
-        return { status: 'rejected' as const, reason };
+        snapshot = this.snapshotFromPayload(forecastPayload.value, latitude, longitude);
+        if (snapshot.condition && snapshot.condition !== 'Unavailable') {
+          usableSignals.add('two_hour_forecast');
+        } else {
+          unavailableSignals.add('two_hour_forecast');
+        }
+      } catch {
+        unavailableSignals.add('two_hour_forecast');
       }
-    };
-
-    const forecastPayload = await settle(this.fetchLatestForecastPayload());
-    const airTemp = await settle(this.fetchNearestReading('air-temperature', latitude, longitude));
-    const relativeHumidity = await settle(
-      this.fetchNearestReading('relative-humidity', latitude, longitude),
-    );
-    const rainfall = await settle(this.fetchNearestReading('rainfall', latitude, longitude));
-    const windSpeed = await settle(this.fetchNearestReading('wind-speed', latitude, longitude));
-    const windDirection = await settle(
-      this.fetchNearestReading('wind-direction', latitude, longitude),
-    );
-    const uvIndex = await settle(this.fetchUvIndex());
-    const airQuality = await settle(this.fetchAirQuality(latitude, longitude));
-    const twentyFourHour = await settle(this.fetchTwentyFourHourForecast(latitude, longitude));
-    const fourDay = await settle(this.fetchFourDayForecast());
-
-    const snapshot =
-      forecastPayload.status === 'fulfilled'
-        ? this.snapshotFromPayload(forecastPayload.value, latitude, longitude)
-        : this.emptyForecastSnapshot();
+    } else {
+      unavailableSignals.add('two_hour_forecast');
+    }
 
     const timestamps: (string | null)[] = [snapshot.observed_at];
 
-    if (airTemp.status === 'fulfilled') {
-      snapshot.temperature_c = airTemp.value.value;
-      timestamps.push(airTemp.value.timestamp);
-    }
-    if (relativeHumidity.status === 'fulfilled') {
-      snapshot.humidity_percent = relativeHumidity.value.value;
-      timestamps.push(relativeHumidity.value.timestamp);
-    }
-    if (rainfall.status === 'fulfilled') {
-      snapshot.rainfall_mm = rainfall.value.value;
-      timestamps.push(rainfall.value.timestamp);
-    }
-    if (windSpeed.status === 'fulfilled') {
-      snapshot.wind_speed_knots = windSpeed.value.value;
-      timestamps.push(windSpeed.value.timestamp);
-    }
-    if (windDirection.status === 'fulfilled') {
-      snapshot.wind_direction_degrees = windDirection.value.value;
-      timestamps.push(windDirection.value.timestamp);
-    }
-    if (uvIndex.status === 'fulfilled') {
-      snapshot.uv_index = uvIndex.value.value;
-      timestamps.push(uvIndex.value.timestamp);
-    }
+    applyReadingSignal(airTemp, 'air_temperature', (value) => {
+      snapshot.temperature_c = value;
+    });
+    applyReadingSignal(relativeHumidity, 'relative_humidity', (value) => {
+      snapshot.humidity_percent = value;
+    });
+    applyReadingSignal(rainfall, 'rainfall', (value) => {
+      snapshot.rainfall_mm = value;
+    });
+    applyReadingSignal(windSpeed, 'wind_speed', (value) => {
+      snapshot.wind_speed_knots = value;
+    });
+    applyReadingSignal(windDirection, 'wind_direction', (value) => {
+      snapshot.wind_direction_degrees = value;
+    });
+    applyReadingSignal(uvIndex, 'uv', (value) => {
+      snapshot.uv_index = value;
+    });
+
     if (airQuality.status === 'fulfilled') {
       snapshot.psi_twenty_four_hourly = airQuality.value.psi;
       snapshot.pm25_one_hourly = airQuality.value.pm25;
       snapshot.air_quality_region = airQuality.value.region;
       timestamps.push(airQuality.value.timestamp);
+      markSignalValue('psi', airQuality.value.psi);
+      markSignalValue('pm25', airQuality.value.pm25);
+    } else {
+      unavailableSignals.add('psi');
+      unavailableSignals.add('pm25');
     }
+
     if (twentyFourHour.status === 'fulfilled') {
       snapshot.forecast_low_c = twentyFourHour.value.low;
       snapshot.forecast_high_c = twentyFourHour.value.high;
       snapshot.forecast_periods = twentyFourHour.value.periods;
       timestamps.push(twentyFourHour.value.timestamp);
+      if (
+        isFiniteNumber(twentyFourHour.value.low) ||
+        isFiniteNumber(twentyFourHour.value.high) ||
+        twentyFourHour.value.periods.length > 0
+      ) {
+        usableSignals.add('twenty_four_hour_forecast');
+      } else {
+        unavailableSignals.add('twenty_four_hour_forecast');
+      }
+    } else {
+      unavailableSignals.add('twenty_four_hour_forecast');
     }
+
     if (fourDay.status === 'fulfilled') {
       snapshot.daily_forecast = fourDay.value.days;
       timestamps.push(fourDay.value.timestamp);
+      if (fourDay.value.days.length > 0) {
+        usableSignals.add('four_day_forecast');
+      } else {
+        unavailableSignals.add('four_day_forecast');
+      }
+    } else {
+      unavailableSignals.add('four_day_forecast');
     }
 
     const latest = latestTimestamp(timestamps);
@@ -265,7 +369,35 @@ export class SingaporeWeatherClient {
       snapshot.observed_at = latest;
     }
 
+    snapshot.data_quality = {
+      status: refreshStatus(usableSignals.size, unavailableSignals.size),
+      last_refreshed_at: (this.options.now ?? (() => new Date()))().toISOString(),
+      unavailable_signals: weatherSignals.filter((signal) => unavailableSignals.has(signal)),
+    };
+
     return snapshot;
+
+    function applyReadingSignal(
+      result: Settled<{ value: number | null; timestamp: string | null }>,
+      signal: WeatherSignal,
+      assign: (value: number | null) => void,
+    ) {
+      if (result.status === 'fulfilled') {
+        assign(result.value.value);
+        timestamps.push(result.value.timestamp);
+        markSignalValue(signal, result.value.value);
+        return;
+      }
+      unavailableSignals.add(signal);
+    }
+
+    function markSignalValue(signal: WeatherSignal, value: number | null) {
+      if (isFiniteNumber(value)) {
+        usableSignals.add(signal);
+      } else {
+        unavailableSignals.add(signal);
+      }
+    }
   }
 
   async fetchLatestForecastPayload(): Promise<ForecastPayload> {
@@ -361,7 +493,6 @@ export class SingaporeWeatherClient {
     const psiPayload = await this.fetchJson<PsiPayload>(
       `${this.apiBaseUrl()}/v2/real-time/api/psi`,
     );
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     const pm25Payload = await this.fetchJson<PsiPayload>(
       `${this.apiBaseUrl()}/v2/real-time/api/pm25`,
     );
@@ -532,6 +663,7 @@ export class SingaporeWeatherClient {
         air_quality_region: null,
         forecast_periods: [],
         daily_forecast: [],
+        data_quality: unknownDataQuality(),
       };
     }
 
@@ -555,6 +687,7 @@ export class SingaporeWeatherClient {
       air_quality_region: null,
       forecast_periods: [],
       daily_forecast: [],
+      data_quality: unknownDataQuality(),
     };
   }
 
@@ -578,8 +711,46 @@ export class SingaporeWeatherClient {
       air_quality_region: null,
       forecast_periods: [],
       daily_forecast: [],
+      data_quality: unknownDataQuality(),
     };
   }
+}
+
+async function runSettled(
+  tasks: Array<() => Promise<unknown>>,
+  concurrency: number,
+): Promise<Array<Settled<unknown>>> {
+  const results: Array<Settled<unknown>> = [];
+  let nextIndex = 0;
+  const workerCount = Math.max(1, Math.min(concurrency, tasks.length));
+
+  async function runWorker() {
+    while (nextIndex < tasks.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      try {
+        results[index] = { status: 'fulfilled', value: await tasks[index]() };
+      } catch (reason) {
+        results[index] = { status: 'rejected', reason };
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+  return results;
+}
+
+function refreshStatus(usableCount: number, unavailableCount: number): RefreshStatus {
+  if (usableCount === 0) return 'unavailable';
+  return unavailableCount === 0 ? 'complete' : 'partial';
+}
+
+function unknownDataQuality(): WeatherDataQuality {
+  return {
+    status: 'unknown',
+    last_refreshed_at: null,
+    unavailable_signals: [],
+  };
 }
 
 function nearestAreaFromMetadata(
@@ -658,6 +829,10 @@ function latestTimestamp(timestamps: Array<string | null>): string | null {
       .filter((timestamp): timestamp is string => Boolean(timestamp))
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null
   );
+}
+
+function isFiniteNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function numberOrNull(value: number | string | undefined): number | null {

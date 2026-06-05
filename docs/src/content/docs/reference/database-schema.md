@@ -32,6 +32,7 @@ erDiagram
     text air_quality_region "nullable"
     text forecast_periods "JSON array"
     text daily_forecast "JSON array"
+    text data_quality "JSON object"
   }
 ```
 
@@ -65,6 +66,7 @@ erDiagram
 | `air_quality_region` | `TEXT` | Yes | Region name for PSI/PM2.5 |
 | `forecast_periods` | `TEXT` (JSON) | No | Array of `{ label, forecast }` |
 | `daily_forecast` | `TEXT` (JSON) | No | Array of `{ date, forecast, temperature_low_c, temperature_high_c }` |
+| `data_quality` | `TEXT` (JSON) | No | `{ status, last_refreshed_at, unavailable_signals }`; migration default is `unknown` |
 
 ### Indexes
 
@@ -82,8 +84,13 @@ New rows are inserted with a default snapshot before the backend attempts the in
 | Scalar weather metrics | `null` |
 | `forecast_periods` | `[]` |
 | `daily_forecast` | `[]` |
+| `data_quality.status` | `not_refreshed` |
+| `data_quality.last_refreshed_at` | `null` |
+| `data_quality.unavailable_signals` | `[]` |
 
 This lets create operations succeed even when the weather provider fails after the location has been saved.
+
+Migrated legacy rows default `data_quality.status` to `unknown`, because older snapshots did not record provider-signal coverage at refresh time.
 
 ## Data Access Flow
 
@@ -99,7 +106,7 @@ flowchart TD
 
 ## Migrations
 
-Migrations are stored in `backend/drizzle/` and run automatically on server startup via `drizzle-orm/sqlite-proxy/migrator`.
+Migrations are stored in `backend/drizzle/` and run automatically on server startup via `drizzle-orm/sqlite-proxy/migrator`. The manual `npm run db:migrate` command imports `backend/src/db.ts` through `backend/src/migrate.ts`, so it uses the same runtime migrator path as the server.
 
 ### Generate a Migration
 
@@ -146,3 +153,5 @@ interface LocationRecord {
 ```
 
 `weatherToColumns()` performs the reverse mapping when a refreshed `WeatherSnapshot` is persisted.
+
+`normalizeDataQuality()` validates JSON read from SQLite. Unknown statuses or unrecognized signal names are discarded back to the safe `unknown`/empty-signal default instead of leaking malformed persisted JSON to API responses.

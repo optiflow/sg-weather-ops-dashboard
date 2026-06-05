@@ -1,0 +1,1 @@
+ALTER TABLE `locations` ADD `data_quality` text DEFAULT '{"status":"unknown","last_refreshed_at":null,"unavailable_signals":[]}' NOT NULL;
