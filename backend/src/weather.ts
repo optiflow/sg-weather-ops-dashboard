@@ -404,6 +404,22 @@ export class SingaporeWeatherClient {
     return this.fetchJson(`${this.apiBaseUrl()}/v2/real-time/api/two-hr-forecast`);
   }
 
+  async listTwoHourForecastAreas(): Promise<TwoHourForecastArea[]> {
+    const payload = await this.fetchLatestForecastPayload();
+    return forecastAreasFromPayload(payload).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getTwoHourForecastAreaByName(name: string): Promise<TwoHourForecastArea> {
+    const normalizedName = normalizeAreaName(name);
+    const area = (await this.listTwoHourForecastAreas()).find(
+      (candidate) => normalizeAreaName(candidate.name) === normalizedName,
+    );
+    if (!area) {
+      throw new WeatherProviderError('Forecast area not found');
+    }
+    return area;
+  }
+
   async getNearestTwoHourForecastArea(
     latitude: number,
     longitude: number,
@@ -413,8 +429,11 @@ export class SingaporeWeatherClient {
       throw new WeatherProviderError(payload.errorMsg ?? 'Weather provider returned an error');
     }
 
-    const root = payload.data ?? payload;
-    const nearestArea = nearestAreaFromMetadata(root.area_metadata ?? [], latitude, longitude);
+    const nearestArea = nearestAreaFromMetadata(
+      forecastAreasFromPayload(payload),
+      latitude,
+      longitude,
+    );
     if (!nearestArea) {
       throw new WeatherProviderError('Forecast response has no area metadata');
     }
@@ -642,7 +661,11 @@ export class SingaporeWeatherClient {
         .map((entry) => [entry.area as string, entry.forecast as string]),
     );
 
-    const nearestArea = nearestAreaFromMetadata(areaMetadata, latitude, longitude);
+    const nearestArea = nearestAreaFromMetadata(
+      forecastAreasFromMetadata(areaMetadata),
+      latitude,
+      longitude,
+    );
     if (nearestArea && forecastByArea.has(nearestArea.name)) {
       return {
         condition: forecastByArea.get(nearestArea.name) as string,
@@ -753,17 +776,40 @@ function unknownDataQuality(): WeatherDataQuality {
   };
 }
 
+function forecastAreasFromPayload(payload: ForecastPayload): TwoHourForecastArea[] {
+  if (payload.code !== undefined && payload.code !== 0) {
+    throw new WeatherProviderError(payload.errorMsg ?? 'Weather provider returned an error');
+  }
+
+  const root = payload.data ?? payload;
+  const areas = forecastAreasFromMetadata(root.area_metadata ?? []);
+  if (areas.length === 0) {
+    throw new WeatherProviderError('Forecast response has no area metadata');
+  }
+  return areas;
+}
+
+function forecastAreasFromMetadata(areaMetadata: AreaMetadata[]): TwoHourForecastArea[] {
+  const byName = new Map<string, TwoHourForecastArea>();
+  for (const area of areaMetadata) {
+    const lat = Number(area.label_location?.latitude);
+    const lon = Number(area.label_location?.longitude);
+    if (!area.name || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    byName.set(area.name, { name: area.name, latitude: lat, longitude: lon });
+  }
+  return [...byName.values()];
+}
+
 function nearestAreaFromMetadata(
-  areaMetadata: AreaMetadata[],
+  areaMetadata: TwoHourForecastArea[],
   latitude: number,
   longitude: number,
 ): TwoHourForecastArea | null {
   let nearest: (TwoHourForecastArea & { distance: number }) | null = null;
 
   for (const area of areaMetadata) {
-    const lat = Number(area.label_location?.latitude);
-    const lon = Number(area.label_location?.longitude);
-    if (!area.name || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const lat = area.latitude;
+    const lon = area.longitude;
 
     const distance = (lat - latitude) ** 2 + (lon - longitude) ** 2;
     if (!nearest || distance < nearest.distance) {
@@ -777,6 +823,10 @@ function nearestAreaFromMetadata(
     latitude: nearest.latitude,
     longitude: nearest.longitude,
   };
+}
+
+function normalizeAreaName(name: string): string {
+  return name.trim().toLowerCase();
 }
 
 function nearestRegionName(

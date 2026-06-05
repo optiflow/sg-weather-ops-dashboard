@@ -29,9 +29,26 @@ Returns server health status. Not prefixed with `/api`.
 
 ## Locations
 
+### `GET /api/forecast-areas`
+
+List canonical Singapore 2-hour forecast areas sorted by name. These are the same area names and label coordinates used by `POST /api/locations/from-area` and browser-position canonicalization.
+
+**Response** `200 OK`
+
+```json
+{
+  "areas": [
+    { "name": "Ang Mo Kio", "latitude": 1.37, "longitude": 103.85 },
+    { "name": "Bedok", "latitude": 1.324, "longitude": 103.924 }
+  ]
+}
+```
+
+---
+
 ### `GET /api/locations`
 
-List saved locations ordered by `created_at` descending, then `id` descending.
+List saved locations. The default API order is recent first, with favorites before non-favorites. The frontend can also sort the returned list by Recent or Name while keeping favorites first.
 
 **Response** `200 OK`
 
@@ -42,6 +59,8 @@ List saved locations ordered by `created_at` descending, then `id` descending.
       "id": 1,
       "latitude": 1.35,
       "longitude": 103.85,
+      "label": "Office",
+      "is_favorite": true,
       "created_at": "2026-05-04T12:00:00",
       "weather": {
         "condition": "Cloudy",
@@ -59,9 +78,55 @@ List saved locations ordered by `created_at` descending, then `id` descending.
 
 ---
 
+### `POST /api/locations/from-area`
+
+Create or select a saved location from a canonical forecast-area name. This is the primary Add Location path.
+
+**Request Body**
+
+```json
+{ "name": "Bishan", "label": "Home" }
+```
+
+`label` is optional and may be a string or `null`. It is trimmed before persistence; empty strings clear the label. Later label and favorite edits use `PATCH /api/locations/:locationId`.
+
+**Validation**
+
+| Rule | Response |
+| --- | --- |
+| Missing or non-string `name` | `422` `{ "detail": "forecast area name is required" }` |
+| Unknown forecast-area name | `422` `{ "detail": "Forecast area not found" }` |
+| `label` is present and not a string or `null` | `422` `{ "detail": "label must be a string or null" }` |
+| `label` exceeds 40 characters after trimming | `422` `{ "detail": "label must be 40 characters or fewer" }` |
+| Forecast-area lookup fails before insert | `502` with the provider error detail |
+
+**Response** `201 Created`
+
+```json
+{
+  "location": {
+    "id": 1,
+    "latitude": 1.352,
+    "longitude": 103.849,
+    "label": "Home",
+    "is_favorite": false,
+    "created_at": "2026-05-04T12:00:00",
+    "weather": { "condition": "Cloudy", "area": "Bishan", "...": "..." }
+  },
+  "created": true,
+  "matched_area": { "name": "Bishan", "latitude": 1.352, "longitude": 103.849 }
+}
+```
+
+If the canonical forecast-area coordinate already exists, the endpoint is idempotent and returns `200 OK` with the existing location and `"created": false`. If the request includes `label`, the existing location's label is updated before the response is returned.
+
+If the weather refresh fails after a new canonical area is saved, the endpoint still returns `201 Created` with the saved location and default weather (`condition: "Not refreshed"`, `weather.data_quality.status: "not_refreshed"`). The matched forecast-area name is still persisted on `weather.area`.
+
+---
+
 ### `POST /api/locations`
 
-Create a new location from explicit coordinates. The request must use JSON numbers, not numeric strings.
+Create a new location from explicit coordinates. This manual coordinate endpoint is the secondary Add Location mode for explicit latitude/longitude testing. The request must use JSON numbers, not numeric strings.
 
 **Request Body**
 
@@ -109,6 +174,8 @@ Create or select a location from browser-derived coordinates. The backend valida
     "id": 1,
     "latitude": 1.352,
     "longitude": 103.849,
+    "label": null,
+    "is_favorite": false,
     "created_at": "2026-05-04T12:00:00",
     "weather": { "condition": "Cloudy", "area": "Bishan", "...": "..." }
   },
@@ -130,6 +197,39 @@ Get a single location by ID.
 **Response** `200 OK`
 
 Returns a single `Location` object.
+
+**Error** `404 Not Found`
+
+```json
+{ "detail": "Location not found" }
+```
+
+---
+
+### `PATCH /api/locations/:locationId`
+
+Update saved-location metadata. Omitted fields are left unchanged.
+
+**Request Body**
+
+```json
+{ "label": "Office", "is_favorite": true }
+```
+
+Use `label: null` to clear a custom label.
+
+**Validation**
+
+| Rule | Response |
+| --- | --- |
+| `label` is present and not a string or `null` | `422` `{ "detail": "label must be a string or null" }` |
+| `label` exceeds 40 characters after trimming | `422` `{ "detail": "label must be 40 characters or fewer" }` |
+| `is_favorite` is present and not a boolean | `422` `{ "detail": "is_favorite must be a boolean" }` |
+| No supported fields are provided | `422` `{ "detail": "label or is_favorite is required" }` |
+
+**Response** `200 OK`
+
+Returns the updated `Location` object.
 
 **Error** `404 Not Found`
 
@@ -180,7 +280,7 @@ Per-endpoint provider failures are settled inside the weather client. The endpoi
 
 ### `POST /api/logs`
 
-Log a frontend interaction event through Pino. The UI fires this for create, browser-position create, refresh, delete, and form-open events. Logging failures are not surfaced in the frontend.
+Log a frontend interaction event through Pino. The UI fires this for area create, manual-coordinate create, browser-position create, metadata update, refresh, delete, and form-open events. Logging failures are not surfaced in the frontend.
 
 **Request Body**
 
@@ -207,8 +307,20 @@ interface Location {
   id: number;
   latitude: number;
   longitude: number;
+  label: string | null;
+  is_favorite: boolean;
   created_at: string;
   weather: WeatherSnapshot;
+}
+```
+
+### `ForecastArea`
+
+```ts
+interface ForecastArea {
+  name: string;
+  latitude: number;
+  longitude: number;
 }
 ```
 

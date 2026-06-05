@@ -49,8 +49,11 @@ describe('locations API', () => {
   let resetStore: () => Promise<void>;
   let deleteStoredLocation: (id: number) => Promise<void>;
   let weatherRequestHandler: (latitude: number, longitude: number) => Promise<WeatherSnapshot>;
+  let forecastAreasHandler: () => Promise<TwoHourForecastArea[]>;
+  let areaByNameHandler: (name: string) => Promise<TwoHourForecastArea>;
   let nearestAreaHandler: (latitude: number, longitude: number) => Promise<TwoHourForecastArea>;
   let weatherRequests: Array<{ latitude: number; longitude: number }>;
+  let areaByNameRequests: string[];
   let nearestAreaRequests: Array<{ latitude: number; longitude: number }>;
 
   beforeAll(async () => {
@@ -58,8 +61,11 @@ describe('locations API', () => {
     process.env.DATABASE_PATH = join(tempDir, 'weather.db');
     process.env.LOG_LEVEL = 'silent';
     weatherRequestHandler = async () => weather;
+    forecastAreasHandler = async () => [bishanArea];
+    areaByNameHandler = async () => bishanArea;
     nearestAreaHandler = async () => bishanArea;
     weatherRequests = [];
+    areaByNameRequests = [];
     nearestAreaRequests = [];
 
     const { createApp } = await import('../server.js');
@@ -70,6 +76,13 @@ describe('locations API', () => {
         async getCurrentWeather(latitude, longitude) {
           weatherRequests.push({ latitude, longitude });
           return weatherRequestHandler(latitude, longitude);
+        },
+        async listTwoHourForecastAreas() {
+          return forecastAreasHandler();
+        },
+        async getTwoHourForecastAreaByName(name) {
+          areaByNameRequests.push(name);
+          return areaByNameHandler(name);
         },
         async getNearestTwoHourForecastArea(latitude, longitude) {
           nearestAreaRequests.push({ latitude, longitude });
@@ -85,8 +98,11 @@ describe('locations API', () => {
 
   beforeEach(async () => {
     weatherRequestHandler = async () => weather;
+    forecastAreasHandler = async () => [bishanArea];
+    areaByNameHandler = async () => bishanArea;
     nearestAreaHandler = async () => bishanArea;
     weatherRequests = [];
+    areaByNameRequests = [];
     nearestAreaRequests = [];
     await resetStore();
   });
@@ -105,6 +121,8 @@ describe('locations API', () => {
       id: 1,
       latitude: 1.35,
       longitude: 103.85,
+      label: null,
+      is_favorite: false,
       weather: {
         condition: 'Cloudy',
         area: 'Bishan',
@@ -120,6 +138,124 @@ describe('locations API', () => {
     const listResponse = await request(app).get('/api/locations').expect(200);
     expect(listResponse.body.locations).toHaveLength(1);
     expect(listResponse.body.locations[0].weather.condition).toBe('Cloudy');
+    expect(listResponse.body.locations[0]).toMatchObject({
+      label: null,
+      is_favorite: false,
+    });
+  });
+
+  it('lists forecast areas sorted by name', async () => {
+    forecastAreasHandler = async () => [
+      bishanArea,
+      { name: 'Changi', latitude: 1.36, longitude: 103.99 },
+    ];
+
+    const response = await request(app).get('/api/forecast-areas').expect(200);
+
+    expect(response.body).toEqual({
+      areas: [bishanArea, { name: 'Changi', latitude: 1.36, longitude: 103.99 }],
+    });
+  });
+
+  it('creates a location from a selected forecast area with a label', async () => {
+    const response = await request(app)
+      .post('/api/locations/from-area')
+      .send({ name: ' Bishan ', label: ' Home ' })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      created: true,
+      matched_area: bishanArea,
+      location: {
+        label: 'Home',
+        is_favorite: false,
+        latitude: bishanArea.latitude,
+        longitude: bishanArea.longitude,
+        weather: {
+          condition: 'Cloudy',
+          area: 'Bishan',
+        },
+      },
+    });
+    expect(areaByNameRequests).toEqual([' Bishan ']);
+    expect(weatherRequests).toEqual([
+      { latitude: bishanArea.latitude, longitude: bishanArea.longitude },
+    ]);
+  });
+
+  it('returns an existing forecast-area location as idempotent success and updates explicit label', async () => {
+    const first = await request(app)
+      .post('/api/locations/from-area')
+      .send({ name: 'Bishan', label: 'Home' })
+      .expect(201);
+
+    const second = await request(app)
+      .post('/api/locations/from-area')
+      .send({ name: 'Bishan', label: 'Office' })
+      .expect(200);
+
+    expect(second.body).toMatchObject({
+      created: false,
+      matched_area: bishanArea,
+      location: {
+        id: first.body.location.id,
+        label: 'Office',
+        latitude: bishanArea.latitude,
+        longitude: bishanArea.longitude,
+      },
+    });
+    expect(weatherRequests).toHaveLength(1);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations).toHaveLength(1);
+    expect(listResponse.body.locations[0].label).toBe('Office');
+  });
+
+  it('rejects invalid or unknown forecast-area create requests', async () => {
+    await request(app).post('/api/locations/from-area').send({ name: '' }).expect(422);
+    await request(app)
+      .post('/api/locations/from-area')
+      .send({ name: 'Bishan', label: 'x'.repeat(41) })
+      .expect(422);
+    areaByNameHandler = async () => {
+      throw new WeatherProviderError('Forecast area not found');
+    };
+
+    const response = await request(app)
+      .post('/api/locations/from-area')
+      .send({ name: 'Atlantis' })
+      .expect(422);
+
+    expect(response.body).toEqual({ detail: 'Forecast area not found' });
+    expect(weatherRequests).toHaveLength(0);
+  });
+
+  it('keeps the canonical forecast-area location when from-area refresh fails', async () => {
+    weatherRequestHandler = async () => {
+      throw new WeatherProviderError('Weather provider rate limit reached (HTTP 429)');
+    };
+
+    const response = await request(app)
+      .post('/api/locations/from-area')
+      .send({ name: 'Bishan', label: 'Home' })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      created: true,
+      matched_area: bishanArea,
+      location: {
+        label: 'Home',
+        latitude: bishanArea.latitude,
+        longitude: bishanArea.longitude,
+        weather: {
+          condition: 'Not refreshed',
+          area: 'Bishan',
+          data_quality: {
+            status: 'not_refreshed',
+          },
+        },
+      },
+    });
   });
 
   it('returns an existing location by id', async () => {
@@ -371,6 +507,69 @@ describe('locations API', () => {
       .expect(409);
 
     expect(response.body).toEqual({ detail: 'Location already exists' });
+  });
+
+  it('updates, clears, and validates saved-location metadata', async () => {
+    const createResponse = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85, label: ' Home ' })
+      .expect(201);
+    const locationId = createResponse.body.id as number;
+
+    expect(createResponse.body).toMatchObject({
+      label: 'Home',
+      is_favorite: false,
+    });
+
+    const favoriteResponse = await request(app)
+      .patch(`/api/locations/${locationId}`)
+      .send({ is_favorite: true, label: ' Office ' })
+      .expect(200);
+    expect(favoriteResponse.body).toMatchObject({
+      id: locationId,
+      label: 'Office',
+      is_favorite: true,
+    });
+
+    const clearResponse = await request(app)
+      .patch(`/api/locations/${locationId}`)
+      .send({ label: '   ' })
+      .expect(200);
+    expect(clearResponse.body.label).toBeNull();
+    expect(clearResponse.body.is_favorite).toBe(true);
+
+    await request(app)
+      .patch(`/api/locations/${locationId}`)
+      .send({ label: 'x'.repeat(41) })
+      .expect(422);
+    await request(app)
+      .patch(`/api/locations/${locationId}`)
+      .send({ is_favorite: 'true' })
+      .expect(422);
+    await request(app).patch(`/api/locations/${locationId}`).send({}).expect(422);
+    await request(app).patch('/api/locations/999').send({ label: 'Missing' }).expect(404);
+  });
+
+  it('orders favorite locations before non-favorites in the default list', async () => {
+    const first = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85, label: 'First' })
+      .expect(201);
+    const second = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.36, longitude: 103.86, label: 'Second' })
+      .expect(201);
+
+    await request(app)
+      .patch(`/api/locations/${first.body.id}`)
+      .send({ is_favorite: true })
+      .expect(200);
+
+    const listResponse = await request(app).get('/api/locations').expect(200);
+    expect(listResponse.body.locations.map((location: { id: number }) => location.id)).toEqual([
+      first.body.id,
+      second.body.id,
+    ]);
   });
 
   it('deletes existing locations and returns not found for missing locations', async () => {

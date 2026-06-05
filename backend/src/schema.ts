@@ -59,6 +59,8 @@ export const locations = sqliteTable(
     latitude: real('latitude').notNull(),
     longitude: real('longitude').notNull(),
     createdAt: text('created_at').notNull(),
+    label: text('label'),
+    isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
     condition: text('condition'),
     observedAt: text('observed_at'),
     source: text('source'),

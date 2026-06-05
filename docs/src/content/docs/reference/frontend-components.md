@@ -58,8 +58,10 @@ Holds all application state for locations and exposes actions through a `StoreVa
 | --- | --- |
 | `select(id)` | Select a location |
 | `setAdding(flag)` | Toggle the add-location form |
+| `createFromArea(payload)` | Add/select a canonical forecast-area location |
 | `create(payload)` | Create a location via the API |
 | `createFromPosition(payload)` | Add/select a canonical forecast-area location from browser coordinates |
+| `update(id, metadata)` | Update a location label and/or favorite state |
 | `refresh(id)` | Refresh weather for a location |
 | `remove(id)` | Delete a location |
 
@@ -95,7 +97,11 @@ The API helper treats non-JSON backend responses as server-unavailable failures,
 
 ### `Sidebar`
 
-The left panel that lists all locations as `SidebarCard` components. Includes an accessible search input labeled **Search saved locations** that filters locations by area name or condition, a **Use my location** action, and the `AddLocationForm` for manual coordinate entry.
+The left panel that lists all locations as `SidebarCard` components. Includes an accessible search input labeled **Search saved locations** that filters locations by label, forecast area, weather condition, and coordinate text. Recent and Name sort controls are local sidebar state and keep favorite locations first. The sidebar also includes a **Use my location** action and the `AddLocationForm`.
+
+### `AddLocationForm`
+
+The add panel uses the forecast-area picker as the primary path. It loads sorted canonical areas from `GET /api/forecast-areas`, submits named areas to `POST /api/locations/from-area`, and keeps manual latitude/longitude entry as a secondary mode for explicit coordinate testing.
 
 ### `UseMyLocationButton`
 
@@ -103,7 +109,7 @@ Wraps browser geolocation and calls `createFromPosition`. Its status message is 
 
 ### `SidebarCard`
 
-Displays area, observation time, condition, temperature, and high/low values for a saved location. Delete uses a lightweight inline confirmation before calling `remove(id)`. The card no longer renders fake **Home** or **My Location** labels; primary-location persistence is out of scope.
+Displays the saved location summary: label or area fallback, favorite state, observation time, condition, temperature, and high/low values. Label and favorite metadata updates go through the store's `update(id, metadata)` action. Delete uses a lightweight inline confirmation before calling `remove(id)`.
 
 ### `Hero`
 
@@ -118,11 +124,11 @@ The main content area showing the selected location's weather. Displays:
 
 ### `RiskBrief`
 
-Builds a frontend-only risk summary from `frontend/src/weatherRisk.ts`. It derives `Low`, `Moderate`, `High`, or `Unavailable` from weather fields and `weather.data_quality`, then shows the most important drivers.
+Builds a frontend-only weather risk recommendation from `frontend/src/weatherRisk.ts`. It derives the underlying `Low`, `Moderate`, `High`, or `Unavailable` state from weather fields and `weather.data_quality`, then renders plain-language guidance such as whether outdoor plans look okay, what to watch, and the recommended next step.
 
 ### `DataTrustStrip`
 
-Shows the persisted refresh status, last refresh time, observation time, and unavailable provider signals from `weather.data_quality`.
+Shows the persisted refresh status, last refresh time, observation time, and unavailable provider signals from `weather.data_quality`. This remains the technical data-quality surface; `RiskBrief` keeps the user-facing recommendation.
 
 ### `HourlyStrip`
 
@@ -156,9 +162,12 @@ The frontend communicates with the backend through a thin `fetch` wrapper in `sr
 
 | Function | HTTP Method | Endpoint |
 | --- | --- | --- |
+| `listForecastAreas()` | `GET` | `/api/forecast-areas` |
 | `listLocations()` | `GET` | `/api/locations` |
+| `createLocationFromArea(payload)` | `POST` | `/api/locations/from-area` |
 | `createLocation(payload)` | `POST` | `/api/locations` |
 | `createLocationFromPosition(payload)` | `POST` | `/api/locations/from-position` |
+| `updateLocation(id, metadata)` | `PATCH` | `/api/locations/:id` |
 | `deleteLocation(id)` | `DELETE` | `/api/locations/:id` |
 | `refreshLocation(id)` | `POST` | `/api/locations/:id/refresh` |
 | `logInteraction(event, metadata)` | `POST` | `/api/logs` |

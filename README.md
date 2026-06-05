@@ -4,7 +4,7 @@
 
 SG Weather Ops Dashboard is an AI-assisted full-stack deployment case study for saving Singapore locations and viewing the latest local weather snapshot for each one. It is built as an npm workspaces monorepo with a React/Vite dashboard, an Express API, SQLite persistence through Drizzle ORM, and Singapore data.gov.sg weather endpoints.
 
-The project is small enough to study end to end. It still covers practical delivery surfaces: location creation, browser geolocation, API validation, external data aggregation, SQLite persistence, refresh behavior, frontend state, responsive UI, local docs, automated tests, and a repeatable quality gate.
+The project is small enough to study end to end. It still covers practical delivery surfaces: forecast-area location creation, browser geolocation, saved-location labeling and favorites, API validation, external data aggregation, SQLite persistence, refresh behavior, frontend state, responsive UI, local docs, automated tests, and a repeatable quality gate.
 
 ## Project Context
 
@@ -51,9 +51,10 @@ npm run lint
 
 ## What It Does
 
-- Saves Singapore coordinates manually through the dashboard.
+- Saves Singapore forecast areas through a primary forecast-area picker.
+- Keeps manual coordinate entry as a secondary mode for explicit latitude/longitude testing.
 - Adds the nearest Singapore 2-hour forecast area from browser geolocation with **Use my location**.
-- Lists, selects, refreshes, and deletes saved locations.
+- Lists, searches, sorts, labels, favorites, selects, refreshes, and deletes saved locations.
 - Stores one latest weather snapshot per location in `backend/weather.db`.
 - Shows 2-hour forecast text, realtime temperature, humidity, rainfall, wind, UV, air quality, 24-hour forecast periods, and a 4-day outlook.
 - Renders a responsive React dashboard with a sidebar, selected-location hero, Weather Risk Brief, Data Trust strip, weather metric tiles, theme switching, and a Leaflet map.
@@ -114,10 +115,13 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) and [configuration reference](docs/src/
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Health check. |
+| `GET` | `/api/forecast-areas` | List sorted canonical Singapore forecast areas. |
 | `GET` | `/api/locations` | List saved locations. |
 | `POST` | `/api/locations` | Create a location from explicit coordinates. |
+| `POST` | `/api/locations/from-area` | Create or select a canonical forecast-area location. |
 | `POST` | `/api/locations/from-position` | Add or select the nearest forecast area from browser coordinates. |
 | `GET` | `/api/locations/:id` | Get one saved location. |
+| `PATCH` | `/api/locations/:id` | Update saved-location label and favorite state. |
 | `DELETE` | `/api/locations/:id` | Delete a saved location. |
 | `POST` | `/api/locations/:id/refresh` | Refresh weather for a saved location. |
 | `POST` | `/api/logs` | Record frontend interaction events through the backend logger. |
@@ -163,6 +167,5 @@ The weather client aggregates 2-hour forecast data, realtime station readings, U
 
 ## Future Ideas
 
-- Forecast-area picker for the manual add flow.
-- Historical readings and charts instead of one latest snapshot per location.
-- Sorting, primary location selection, and stronger mobile controls for saved locations.
+- Stronger mobile controls for saved-location management.
+- Historical readings and trend charts are intentionally deferred until the Weather Risk Brief proves useful, because they require a new persistence model instead of the current one-snapshot-per-location table.

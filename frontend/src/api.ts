@@ -1,9 +1,21 @@
-import type { CreateLocationPayload, Location, LocationFromPositionResponse } from './types';
+import type {
+  CreateLocationFromAreaPayload,
+  CreateLocationPayload,
+  ForecastArea,
+  Location,
+  LocationFromAreaResponse,
+  LocationFromPositionResponse,
+  UpdateLocationPayload,
+} from './types';
 
 const API_BASE = '/api';
 
 interface LocationsResponse {
   locations: Location[];
+}
+
+interface ForecastAreasResponse {
+  areas: ForecastArea[];
 }
 
 interface ApiError {
@@ -40,8 +52,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const listLocations = () => request<LocationsResponse>('/locations');
 
+export const listForecastAreas = () => request<ForecastAreasResponse>('/forecast-areas');
+
 export const createLocation = (payload: CreateLocationPayload) =>
   request<Location>('/locations', { method: 'POST', body: JSON.stringify(payload) });
+
+export const createLocationFromArea = (payload: CreateLocationFromAreaPayload) =>
+  request<LocationFromAreaResponse>('/locations/from-area', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 
 export const createLocationFromPosition = (payload: CreateLocationPayload) =>
   request<LocationFromPositionResponse>('/locations/from-position', {
@@ -54,6 +74,9 @@ export const deleteLocation = (id: number) =>
 
 export const refreshLocation = (id: number) =>
   request<Location>(`/locations/${id}/refresh`, { method: 'POST' });
+
+export const updateLocation = (id: number, payload: UpdateLocationPayload) =>
+  request<Location>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
 
 export function logInteraction(event: string, metadata: object = {}) {
   const page = typeof window === 'undefined' ? undefined : window.location.pathname;

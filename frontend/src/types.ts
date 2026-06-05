@@ -57,6 +57,8 @@ export interface WeatherSnapshot {
 
 export interface Location {
   id: number;
+  label: string | null;
+  is_favorite: boolean;
   latitude: number;
   longitude: number;
   created_at: string;
@@ -66,12 +68,31 @@ export interface Location {
 export interface CreateLocationPayload {
   latitude: number;
   longitude: number;
+  label?: string | null;
 }
 
 export interface MatchedArea {
   name: string;
   latitude: number;
   longitude: number;
+}
+
+export type ForecastArea = MatchedArea;
+
+export interface CreateLocationFromAreaPayload {
+  name: string;
+  label?: string | null;
+}
+
+export interface UpdateLocationPayload {
+  label?: string | null;
+  is_favorite?: boolean;
+}
+
+export interface LocationFromAreaResponse {
+  location: Location;
+  created: boolean;
+  matched_area: MatchedArea;
 }
 
 export interface LocationFromPositionResponse {
@@ -90,7 +111,9 @@ export interface StoreValue {
   select: (id: number | null) => void;
   setAdding: (isAdding: boolean) => void;
   create: (payload: CreateLocationPayload) => Promise<void>;
+  createFromArea: (payload: CreateLocationFromAreaPayload) => Promise<LocationFromAreaResponse>;
   createFromPosition: (payload: CreateLocationPayload) => Promise<LocationFromPositionResponse>;
+  update: (id: number, payload: UpdateLocationPayload) => Promise<Location>;
   refresh: (id: number) => Promise<void>;
   remove: (id: number) => Promise<void>;
 }

@@ -13,6 +13,8 @@ erDiagram
     integer id PK "auto-increment"
     real latitude "NOT NULL"
     real longitude "NOT NULL"
+    text label "nullable"
+    integer is_favorite "NOT NULL, boolean"
     text created_at "NOT NULL, ISO-8601"
     text condition "nullable"
     text observed_at "nullable"
@@ -38,15 +40,17 @@ erDiagram
 
 ## Table: `locations`
 
-`locations` is defined in `backend/src/schema.ts` with Drizzle's `sqliteTable` helper. It combines saved coordinate data and the latest weather snapshot for that coordinate.
+`locations` is defined in `backend/src/schema.ts` with Drizzle's `sqliteTable` helper. It combines saved coordinate data, saved-location metadata, and the latest weather snapshot for that coordinate.
 
 ### Columns
 
 | Column | SQLite Type | Nullable | Notes |
 | --- | --- | --- | --- |
 | `id` | `INTEGER` | No | Primary key, auto-increment |
-| `latitude` | `REAL` | No | |
-| `longitude` | `REAL` | No | |
+| `latitude` | `REAL` | No | Canonical forecast-area latitude or manual latitude |
+| `longitude` | `REAL` | No | Canonical forecast-area longitude or manual longitude |
+| `label` | `TEXT` | Yes | Optional user-facing name for the saved location |
+| `is_favorite` | `INTEGER` | No | Boolean favorite flag; defaults to `0` / `false` |
 | `created_at` | `TEXT` | No | ISO-8601 timestamp |
 | `condition` | `TEXT` | Yes | e.g. "Cloudy", "Fair" |
 | `observed_at` | `TEXT` | Yes | Latest observation timestamp |
@@ -78,6 +82,8 @@ New rows are inserted with a default snapshot before the backend attempts the in
 
 | Field | Default |
 | --- | --- |
+| `label` | `null` |
+| `is_favorite` | `false` |
 | `condition` | `Not refreshed` |
 | `observed_at` | `null` |
 | `source` | `not-refreshed` |
@@ -88,7 +94,7 @@ New rows are inserted with a default snapshot before the backend attempts the in
 | `data_quality.last_refreshed_at` | `null` |
 | `data_quality.unavailable_signals` | `[]` |
 
-This lets create operations succeed even when the weather provider fails after the location has been saved.
+This lets create operations succeed even when the weather provider fails after the location has been saved. Forecast-area creates and browser-position creates still persist the matched area name on `weather.area` when the provider refresh fails after insert.
 
 Migrated legacy rows default `data_quality.status` to `unknown`, because older snapshots did not record provider-signal coverage at refresh time.
 
@@ -130,10 +136,11 @@ The `backend/src/db.ts` module exports these async functions:
 
 | Function | Description |
 | --- | --- |
-| `listLocations()` | Returns all locations ordered by newest first |
-| `createLocation(lat, lon)` | Inserts a location with default weather; throws `DuplicateLocationError` on conflict |
+| `listLocations()` | Returns all locations in recent order with favorites first |
+| `createLocation(lat, lon, options?)` | Inserts a location with optional label and default weather; throws `DuplicateLocationError` on conflict |
 | `getLocation(id)` | Returns a single location or `null` |
 | `getLocationByCoordinates(lat, lon)` | Returns a saved location by exact latitude/longitude pair or `null` |
+| `updateLocationMetadata(id, metadata)` | Updates `label` and/or `is_favorite` for a saved location |
 | `updateWeather(id, snapshot)` | Updates weather columns for a location |
 | `deleteLocation(id)` | Deletes a location by ID |
 | `resetStore()` | Deletes all locations and resets auto-increment |
@@ -147,6 +154,8 @@ interface LocationRecord {
   id: number;
   latitude: number;
   longitude: number;
+  label: string | null;
+  is_favorite: boolean;
   created_at: string;
   weather: WeatherSnapshot;
 }
@@ -155,3 +164,7 @@ interface LocationRecord {
 `weatherToColumns()` performs the reverse mapping when a refreshed `WeatherSnapshot` is persisted.
 
 `normalizeDataQuality()` validates JSON read from SQLite. Unknown statuses or unrecognized signal names are discarded back to the safe `unknown`/empty-signal default instead of leaking malformed persisted JSON to API responses.
+
+## No Historical Readings Table
+
+The current schema intentionally stores one latest weather snapshot per location. Historical readings and trend charts are deferred until the Weather Risk Brief proves useful, because they require a new persistence model for append-only observations, retention, and chart queries rather than more columns on `locations`.

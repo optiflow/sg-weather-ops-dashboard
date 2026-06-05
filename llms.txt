@@ -1,6 +1,6 @@
 # SG Weather Ops Dashboard
 
-> SG Weather Ops Dashboard is an AI-assisted full-stack TypeScript deployment case study for tracking Singapore weather snapshots. It uses a React/Vite/Tailwind frontend, an Express backend, SQLite persistence through Drizzle ORM, and data.gov.sg weather APIs.
+> SG Weather Ops Dashboard is an AI-assisted full-stack TypeScript deployment case study for tracking Singapore forecast-area weather snapshots. It uses a React/Vite/Tailwind frontend, an Express backend, SQLite persistence through Drizzle ORM, and data.gov.sg weather APIs.
 
 Important notes:
 - Local repository files are the source of truth for implementation details.
@@ -14,21 +14,21 @@ Important notes:
 - [Starlight docs overview](docs/src/content/docs/index.mdx): User-facing docs entrypoint with architecture summary, key features, and source map.
 - [Architecture](docs/ARCHITECTURE.md): Workspace layout and high-level frontend, backend, scripts, and docs responsibilities.
 - [Commands](docs/COMMANDS.md): Canonical development, build, test, lint, docs, database, and troubleshooting commands.
-- [API endpoints](docs/src/content/docs/reference/api-endpoints.md): REST behavior for health, location CRUD, browser-position create, refresh, and frontend logging.
+- [API endpoints](docs/src/content/docs/reference/api-endpoints.md): REST behavior for health, canonical forecast areas, area/coordinate/browser-position location creates, label/favorite updates, refresh, and frontend logging.
 - [Database schema](docs/src/content/docs/reference/database-schema.md): SQLite table shape, Drizzle mapping, migrations, defaults, and data access helpers.
-- [Weather data pipeline](docs/src/content/docs/guides/weather-data.md): data.gov.sg endpoint usage, station and region matching, snapshot shape, data quality, Weather Risk Brief derivation, and partial failure handling.
+- [Weather data pipeline](docs/src/content/docs/guides/weather-data.md): data.gov.sg endpoint usage, forecast-area metadata, station and region matching, snapshot shape, data quality, Weather Risk Brief derivation, partial failure handling, and the deferred historical-trends boundary.
 
 ## Implementation Entry Points
 
 - [Express app](backend/src/server.ts): App construction, security headers, JSON limits, health route, frontend logging, API mounting, and Vite/static serving.
-- [Location routes](backend/src/routes/locations.ts): `/api/locations*` route behavior, input validation, duplicate handling, browser geolocation matching, and provider errors.
+- [Location routes](backend/src/routes/locations.ts): forecast-area and `/api/locations*` route behavior, input validation, duplicate handling, metadata updates, browser geolocation matching, and provider errors.
 - [Weather client](backend/src/weather.ts): Singapore data.gov.sg client, provider aggregation, nearest-area/station/region matching, `WeatherSnapshot` construction, and `data_quality` classification.
 - [Database helpers](backend/src/db.ts): Drizzle-backed persistence helpers for listing, creating, refreshing, deleting, and resetting locations.
 - [Database schema](backend/src/schema.ts): Drizzle table definition for saved coordinates and persisted weather snapshot fields.
 - [Frontend API client](frontend/src/api.ts): Browser fetch wrapper and frontend request/response contracts.
-- [Frontend state](frontend/src/state/store.tsx): Location list, selected location, create/refresh/delete actions, and UI state coordination.
+- [Frontend state](frontend/src/state/store.tsx): Location list, selected location, saved-location sorting, create/update/refresh/delete actions, and UI state coordination.
 - [Frontend app shell](frontend/src/App.tsx): Main dashboard composition and selected-location rendering.
-- [Frontend components](frontend/src/components): Sidebar, cards, hero, Risk Brief, Data Trust strip, metric tiles, hourly strip, 4-day forecast, map, theme selector, and geolocation button.
+- [Frontend components](frontend/src/components): Sidebar, forecast-area picker, cards, hero, Risk Brief, Data Trust strip, metric tiles, hourly strip, 4-day forecast, map, theme selector, and geolocation button.
 - [Frontend shared types](frontend/src/types.ts): TypeScript contracts shared across frontend state and components.
 
 ## Agent and Workflow Guidance

@@ -8,6 +8,10 @@ import { RiskBrief } from './RiskBrief';
 import { TenDayForecast } from './TenDayForecast';
 import { TileGrid } from './Tiles';
 
+function coordinatesText(location: { latitude: number; longitude: number }): string {
+  return `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
+}
+
 export function Hero() {
   const { refresh, refreshingId } = useStore();
   const selected = useSelectedLocation();
@@ -19,7 +23,7 @@ export function Hero() {
           <div className="text-center">
             <p className="text-2xl font-light text-white/85">Select a location</p>
             <p className="mt-2 text-sm text-white/60">
-              Add a Singapore coordinate from the sidebar to see its weather.
+              Add a Singapore forecast area from the sidebar to see its weather.
             </p>
           </div>
         </div>
@@ -27,8 +31,11 @@ export function Hero() {
     );
   }
 
-  const area =
-    selected.weather?.area || `${selected.latitude.toFixed(3)}, ${selected.longitude.toFixed(3)}`;
+  const coordinates = coordinatesText(selected);
+  const forecastArea = selected.weather?.area || null;
+  const customLabel = selected.label?.trim() ?? '';
+  const area = customLabel || forecastArea || coordinates;
+  const secondaryArea = customLabel ? forecastArea || coordinates : null;
   const condition = selected.weather?.condition || 'Conditions unavailable';
   const observed = formatTime(selected.weather?.observed_at);
   const validPeriod = selected.weather?.valid_period_text;
@@ -43,6 +50,7 @@ export function Hero() {
       <div className="mx-auto flex max-w-5xl flex-col gap-3 p-4 pt-14 sm:p-6 md:pt-6 lg:p-8">
         <header className="flex flex-col items-center pb-2 pt-4 text-center md:pt-6">
           <h1 className="text-3xl font-light leading-tight text-white sm:text-4xl">{area}</h1>
+          {secondaryArea && <p className="mt-1 text-sm text-white/65">{secondaryArea}</p>}
           <div className="mt-2 text-6xl font-extralight leading-none tracking-tight text-white sm:text-[6.5rem]">
             {temperature}
           </div>
@@ -76,6 +84,7 @@ export function Hero() {
           </button>
           <p>
             Weather for {area}
+            {secondaryArea ? ` · ${secondaryArea}` : ''}
             {source ? ` · ${source}` : ''}
           </p>
         </footer>

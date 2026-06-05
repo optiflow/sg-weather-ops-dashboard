@@ -8,16 +8,17 @@ export interface RiskDriver {
   label: string;
   value: string;
   detail: string;
+  advice: string;
   priority: number;
 }
 
 export interface WeatherRiskBrief {
   level: RiskLevel;
   label: string;
-  summary: string;
-  freshnessLabel: string;
-  availableSignals: number;
-  totalSignals: number;
+  headline: string;
+  recommendation: string;
+  confidenceLabel: string;
+  confidenceDetail: string;
   drivers: RiskDriver[];
 }
 
@@ -26,7 +27,6 @@ interface RiskOptions {
   now?: Date;
 }
 
-const TOTAL_SIGNALS = 11;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
@@ -54,23 +54,19 @@ export function buildWeatherRiskBrief(
   const inferredMissing = inferredMissingSignals(weather);
   for (const signal of inferredMissing) unavailableSignals.add(signal);
 
-  const availableSignals = Math.max(0, TOTAL_SIGNALS - unavailableSignals.size);
   const freshness = freshnessState(weather, now);
+  const confidence = confidenceState(weather, freshness, unavailableSignals);
 
   if (
     weather.data_quality?.status === 'not_refreshed' ||
     weather.condition === 'Not refreshed' ||
     weather.source === 'not-refreshed'
   ) {
-    return unavailableBrief(
-      'Refresh this location to build a risk brief from current weather data.',
-    );
+    return unavailableBrief(area, confidence);
   }
 
   if (freshness.level === 'unavailable' || weather.data_quality?.status === 'unavailable') {
-    return unavailableBrief(
-      'Refresh this location to build a risk brief from current weather data.',
-    );
+    return unavailableBrief(area, confidence);
   }
 
   const drivers = [
@@ -92,34 +88,24 @@ export function buildWeatherRiskBrief(
       ? 'moderate'
       : 'low';
   const label = labelForLevel(level);
-  const summary =
+  const headline =
     level === 'high'
-      ? `High attention: ${topDriver.label.toLowerCase()} is the main driver for ${area}.`
+      ? `${topDriver.label} could affect plans in ${area}.`
       : level === 'moderate'
-        ? `Watch: ${topDriver.label.toLowerCase()} may affect outdoor plans for ${area}.`
-        : `No major weather drivers in the latest snapshot for ${area}.`;
+        ? `${topDriver.label} may affect outdoor plans in ${area}.`
+        : `Outdoor plans look okay in ${area}.`;
+  const recommendation =
+    topDriver?.advice ?? 'No special action needed; keep an eye on normal weather changes.';
 
   return {
     level,
     label,
-    summary,
-    freshnessLabel: freshness.label,
-    availableSignals,
-    totalSignals: TOTAL_SIGNALS,
+    headline,
+    recommendation,
+    confidenceLabel: confidence.label,
+    confidenceDetail: confidence.detail,
     drivers: drivers.slice(0, 3),
   };
-
-  function unavailableBrief(summary: string): WeatherRiskBrief {
-    return {
-      level: 'unavailable',
-      label: labelForLevel('unavailable'),
-      summary,
-      freshnessLabel: freshness.label,
-      availableSignals,
-      totalSignals: TOTAL_SIGNALS,
-      drivers: [],
-    };
-  }
 }
 
 export function signalLabel(signal: WeatherSignal): string {
@@ -142,11 +128,12 @@ function rainDriver(weather: WeatherSnapshot): RiskDriver | null {
     return {
       key: 'rain',
       level: 'high',
-      label: 'Rain and storms',
+      label: 'Rain or thunder',
       value: isFiniteNumber(rainfall)
         ? `${rainfall.toFixed(1)} mm`
         : weather.condition || 'storm risk',
       detail: 'Wet or thundery conditions may disrupt outdoor activity.',
+      advice: 'Bring an umbrella and plan for shelter before heading out.',
       priority: 100,
     };
   }
@@ -155,11 +142,12 @@ function rainDriver(weather: WeatherSnapshot): RiskDriver | null {
     return {
       key: 'rain',
       level: 'moderate',
-      label: 'Rain watch',
+      label: 'Rain or thunder',
       value: isFiniteNumber(rainfall)
         ? `${rainfall.toFixed(1)} mm`
         : weather.condition || 'rain risk',
       detail: 'Monitor showers before outdoor movement.',
+      advice: 'Carry rain gear and check the sky before longer outdoor trips.',
       priority: 90,
     };
   }
@@ -173,9 +161,13 @@ function uvDriver(weather: WeatherSnapshot): RiskDriver | null {
   return {
     key: 'uv',
     level: uv >= 8 ? 'high' : 'moderate',
-    label: uv >= 8 ? 'High UV' : 'UV watch',
+    label: 'Strong sun',
     value: uv.toFixed(0),
     detail: uv >= 8 ? 'Limit direct sun exposure.' : 'Plan shade for longer outdoor activity.',
+    advice:
+      uv >= 8
+        ? 'Use shade, sunscreen, and a hat if you need to be outside.'
+        : 'Use shade or sun protection for longer outdoor plans.',
     priority: uv >= 8 ? 85 : 55,
   };
 }
@@ -187,9 +179,10 @@ function airQualityDriver(weather: WeatherSnapshot): RiskDriver | null {
     return {
       key: 'air',
       level: 'high',
-      label: 'Poor air quality',
+      label: 'Air quality',
       value: isFiniteNumber(psi) ? `PSI ${psi.toFixed(0)}` : `PM2.5 ${pm25?.toFixed(0)}`,
       detail: 'Consider reducing prolonged outdoor exposure.',
+      advice: 'Reduce prolonged outdoor activity, especially for sensitive groups.',
       priority: 80,
     };
   }
@@ -197,9 +190,10 @@ function airQualityDriver(weather: WeatherSnapshot): RiskDriver | null {
     return {
       key: 'air',
       level: 'moderate',
-      label: 'Air quality watch',
+      label: 'Air quality',
       value: isFiniteNumber(psi) ? `PSI ${psi.toFixed(0)}` : `PM2.5 ${pm25?.toFixed(0)}`,
       detail: 'Air quality may affect sensitive outdoor plans.',
+      advice: 'Keep outdoor plans flexible if air quality matters to you.',
       priority: 50,
     };
   }
@@ -214,9 +208,13 @@ function windDriver(weather: WeatherSnapshot): RiskDriver | null {
   return {
     key: 'wind',
     level: speedKmh >= 40 ? 'high' : 'moderate',
-    label: speedKmh >= 40 ? 'Strong wind' : 'Wind watch',
+    label: 'Wind',
     value: `${Math.round(speedKmh)} km/h`,
     detail: speedKmh >= 40 ? 'Secure loose outdoor items.' : 'Check exposed outdoor activity.',
+    advice:
+      speedKmh >= 40
+        ? 'Secure loose items and take care in exposed areas.'
+        : 'Take care with exposed outdoor activities.',
     priority: speedKmh >= 40 ? 75 : 45,
   };
 }
@@ -236,11 +234,14 @@ function heatDriver(weather: WeatherSnapshot): RiskDriver | null {
   return {
     key: 'heat',
     level: highHeat ? 'high' : 'moderate',
-    label: highHeat ? 'Heat stress' : 'Heat watch',
+    label: 'Heat',
     value: isFiniteNumber(high) ? `High ${Math.round(high)} C` : `${Math.round(current ?? 0)} C`,
     detail: highHeat
       ? 'Plan hydration and shaded breaks.'
       : 'Watch heat for extended outdoor work.',
+    advice: highHeat
+      ? 'Hydrate often and plan shaded breaks.'
+      : 'Bring water and take breaks during extended outdoor activity.',
     priority: highHeat ? 70 : 40,
   };
 }
@@ -265,9 +266,10 @@ function freshnessState(
       driver: {
         key: 'freshness',
         level: 'moderate',
-        label: 'Stale snapshot',
+        label: 'Old update',
         value: '2h+',
         detail: 'Refresh before making time-sensitive decisions.',
+        advice: 'Tap Refresh before relying on this for time-sensitive plans.',
         priority: 30,
       },
     };
@@ -284,9 +286,10 @@ function coverageDriver(
     return {
       key: 'coverage',
       level: 'moderate',
-      label: 'Partial data',
+      label: 'Incomplete readings',
       value: `${unavailableSignals.size} missing`,
       detail: 'Some provider signals are unavailable in this snapshot.',
+      advice: 'Use this as a lower-confidence guide and refresh when possible.',
       priority: 20,
     };
   }
@@ -294,9 +297,10 @@ function coverageDriver(
     return {
       key: 'coverage',
       level: 'moderate',
-      label: 'Unknown data trust',
+      label: 'Incomplete readings',
       value: 'legacy row',
       detail: 'Refresh to calculate current data coverage.',
+      advice: 'Tap Refresh to rebuild this brief with current readings.',
       priority: 15,
     };
   }
@@ -320,10 +324,77 @@ function inferredMissingSignals(weather: WeatherSnapshot): WeatherSignal[] {
 }
 
 function labelForLevel(level: RiskLevel): string {
-  if (level === 'low') return 'Low';
-  if (level === 'moderate') return 'Moderate';
-  if (level === 'high') return 'High';
-  return 'Unavailable';
+  if (level === 'low') return 'Looks okay';
+  if (level === 'moderate') return 'Watch conditions';
+  if (level === 'high') return 'Take care';
+  return 'Refresh needed';
+}
+
+function unavailableBrief(area: string, confidence: ConfidenceState): WeatherRiskBrief {
+  return {
+    level: 'unavailable',
+    label: labelForLevel('unavailable'),
+    headline: `Refresh ${area} to see the latest weather risk brief.`,
+    recommendation: 'Tap Refresh before relying on this location for outdoor plans.',
+    confidenceLabel: confidence.label,
+    confidenceDetail: confidence.detail,
+    drivers: [],
+  };
+}
+
+interface ConfidenceState {
+  label: string;
+  detail: string;
+}
+
+function confidenceState(
+  weather: WeatherSnapshot,
+  freshness: ReturnType<typeof freshnessState>,
+  unavailableSignals: Set<WeatherSignal>,
+): ConfidenceState {
+  if (
+    weather.data_quality?.status === 'not_refreshed' ||
+    weather.condition === 'Not refreshed' ||
+    weather.source === 'not-refreshed'
+  ) {
+    return {
+      label: 'No current update',
+      detail: 'Refresh this location to check current conditions.',
+    };
+  }
+
+  if (freshness.level === 'unavailable' || weather.data_quality?.status === 'unavailable') {
+    return {
+      label: 'Refresh needed',
+      detail: 'Current weather readings are not available for this brief.',
+    };
+  }
+
+  if (freshness.driver) {
+    return {
+      label: 'Older update',
+      detail: 'This observation is more than 2 hours old; refresh before time-sensitive plans.',
+    };
+  }
+
+  if (weather.data_quality?.status === 'partial' || unavailableSignals.size >= 3) {
+    return {
+      label: 'Some readings missing',
+      detail: 'A few weather readings are unavailable, so treat this as a quick guide.',
+    };
+  }
+
+  if (weather.data_quality?.status === 'unknown') {
+    return {
+      label: 'Refresh recommended',
+      detail: 'Refresh this saved location to confirm current data coverage.',
+    };
+  }
+
+  return {
+    label: 'Updated recently',
+    detail: 'Readings are current enough for a quick outdoor check.',
+  };
 }
 
 function parseTime(value: string | null | undefined): Date | null {

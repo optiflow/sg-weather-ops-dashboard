@@ -1,18 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import {
   createLocation,
+  createLocationFromArea,
   createLocationFromPosition,
   deleteLocation,
   listLocations,
   logInteraction,
   refreshLocation,
+  updateLocation,
 } from '../api';
 import type {
+  CreateLocationFromAreaPayload,
   CreateLocationPayload,
   Location,
+  LocationFromAreaResponse,
   LocationFromPositionResponse,
   ProviderProps,
   StoreValue,
+  UpdateLocationPayload,
 } from '../types';
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -78,6 +83,37 @@ export function StoreProvider({ children }: ProviderProps) {
     [load],
   );
 
+  const createFromArea = useCallback(
+    async (payload: CreateLocationFromAreaPayload): Promise<LocationFromAreaResponse> => {
+      setError(null);
+      logInteraction('location_from_area_submitted', {
+        area: payload.name,
+        hasLabel: Boolean(payload.label?.trim()),
+      });
+      try {
+        const result = await createLocationFromArea(payload);
+        await load();
+        setSelectedId(result.location.id);
+        setIsAdding(false);
+        logInteraction('location_from_area_added', {
+          locationId: result.location.id,
+          area: result.matched_area.name,
+          created: result.created,
+          hasLabel: Boolean(result.location.label?.trim()),
+        });
+        return result;
+      } catch (err) {
+        setError(err);
+        logInteraction('location_from_area_failed', {
+          area: payload.name,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        throw err;
+      }
+    },
+    [load],
+  );
+
   const createFromPosition = useCallback(
     async (payload: CreateLocationPayload): Promise<LocationFromPositionResponse> => {
       setError(null);
@@ -99,6 +135,37 @@ export function StoreProvider({ children }: ProviderProps) {
       }
     },
     [load],
+  );
+
+  const update = useCallback(
+    async (id: number, payload: UpdateLocationPayload): Promise<Location> => {
+      setError(null);
+      logInteraction('location_update_submitted', {
+        locationId: id,
+        hasLabel: payload.label === undefined ? undefined : Boolean(payload.label?.trim()),
+        isFavorite: payload.is_favorite,
+      });
+      try {
+        const updated = await updateLocation(id, payload);
+        setLocations((current) =>
+          current.map((location) => (location.id === updated.id ? updated : location)),
+        );
+        logInteraction('location_updated', {
+          locationId: updated.id,
+          hasLabel: Boolean(updated.label?.trim()),
+          isFavorite: updated.is_favorite,
+        });
+        return updated;
+      } catch (err) {
+        setError(err);
+        logInteraction('location_update_failed', {
+          locationId: id,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        throw err;
+      }
+    },
+    [],
   );
 
   const refresh = useCallback(
@@ -159,7 +226,9 @@ export function StoreProvider({ children }: ProviderProps) {
       if (nextIsAdding) logInteraction('location_form_opened');
     },
     create,
+    createFromArea,
     createFromPosition,
+    update,
     refresh,
     remove,
   };

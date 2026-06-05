@@ -16,6 +16,8 @@ export interface LocationRecord {
   id: number;
   latitude: number;
   longitude: number;
+  label: string | null;
+  is_favorite: boolean;
   created_at: string;
   weather: WeatherSnapshot;
 }
@@ -95,11 +97,19 @@ await migrate(
 
 export async function listLocations(): Promise<LocationRecord[]> {
   return (
-    await db.select().from(locations).orderBy(desc(locations.createdAt), desc(locations.id)).all()
+    await db
+      .select()
+      .from(locations)
+      .orderBy(desc(locations.isFavorite), desc(locations.createdAt), desc(locations.id))
+      .all()
   ).map(rowToRecord);
 }
 
-export async function createLocation(latitude: number, longitude: number): Promise<LocationRecord> {
+export async function createLocation(
+  latitude: number,
+  longitude: number,
+  metadata: { label?: string | null } = {},
+): Promise<LocationRecord> {
   const createdAt = new Date().toISOString().slice(0, 19);
   const weather = weatherToColumns(defaultWeather);
   let row: LocationRow;
@@ -110,6 +120,7 @@ export async function createLocation(latitude: number, longitude: number): Promi
       .values({
         latitude,
         longitude,
+        label: metadata.label ?? null,
         createdAt,
         ...weather,
       })
@@ -149,6 +160,18 @@ export async function updateWeather(
   const columns = weatherToColumns(weather);
   const row = await db.update(locations).set(columns).where(eq(locations.id, id)).returning().get();
 
+  return row ? rowToRecord(row) : null;
+}
+
+export async function updateLocationMetadata(
+  id: number,
+  metadata: { label?: string | null; isFavorite?: boolean },
+): Promise<LocationRecord | null> {
+  const update: Partial<typeof locations.$inferInsert> = {};
+  if ('label' in metadata) update.label = metadata.label ?? null;
+  if ('isFavorite' in metadata) update.isFavorite = metadata.isFavorite;
+
+  const row = await db.update(locations).set(update).where(eq(locations.id, id)).returning().get();
   return row ? rowToRecord(row) : null;
 }
 
@@ -212,6 +235,8 @@ function rowToRecord(row: LocationRow): LocationRecord {
     id: row.id,
     latitude: row.latitude,
     longitude: row.longitude,
+    label: row.label,
+    is_favorite: Boolean(row.isFavorite),
     created_at: row.createdAt,
     weather: {
       condition: row.condition,

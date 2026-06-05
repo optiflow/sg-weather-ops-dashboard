@@ -42,6 +42,51 @@ describe('SingaporeWeatherClient forecast-area matching', () => {
     );
   });
 
+  it('lists forecast areas sorted by name and resolves a name case-insensitively', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          code: 0,
+          data: {
+            area_metadata: [
+              {
+                name: 'Changi',
+                label_location: { latitude: 1.36, longitude: 103.99 },
+              },
+              {
+                name: 'Bishan',
+                label_location: { latitude: 1.352, longitude: 103.849 },
+              },
+            ],
+            items: [],
+          },
+        }),
+      })),
+    );
+
+    const client = new SingaporeWeatherClient({ timeoutMs: 1000 });
+    await expect(client.listTwoHourForecastAreas()).resolves.toEqual([
+      { name: 'Bishan', latitude: 1.352, longitude: 103.849 },
+      { name: 'Changi', latitude: 1.36, longitude: 103.99 },
+    ]);
+    await expect(client.getTwoHourForecastAreaByName(' bishan ')).resolves.toEqual({
+      name: 'Bishan',
+      latitude: 1.352,
+      longitude: 103.849,
+    });
+  });
+
+  it('throws a provider error for unknown forecast-area names', async () => {
+    vi.stubGlobal('fetch', fetchFromFixtures());
+
+    const client = new SingaporeWeatherClient({ timeoutMs: 1000 });
+    await expect(client.getTwoHourForecastAreaByName('Atlantis')).rejects.toThrow(
+      new WeatherProviderError('Forecast area not found'),
+    );
+  });
+
   it('throws a provider error when forecast-area metadata is unavailable', async () => {
     vi.stubGlobal(
       'fetch',

@@ -1,29 +1,77 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
+import type { Location } from '../types';
 import { AddLocationForm } from './AddLocationForm';
 import { SearchIcon } from './icons';
 import { SidebarCard } from './SidebarCard';
 import { UseMyLocationButton } from './UseMyLocationButton';
+
+type SortMode = 'recent' | 'name';
 
 function errorMessage(error: unknown): string {
   if (!error) return '';
   return error instanceof Error ? error.message : 'Weather data could not be updated.';
 }
 
+function coordinatesText(location: Location): string {
+  return `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
+}
+
+function displayTitle(location: Location): string {
+  return location.label?.trim() || location.weather.area || coordinatesText(location);
+}
+
+function createdAtTimestamp(location: Location): number {
+  const timestamp = Date.parse(location.created_at);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function compareFavorites(a: Location, b: Location): number {
+  return Number(b.is_favorite) - Number(a.is_favorite);
+}
+
+function compareByName(a: Location, b: Location): number {
+  const titleCompare = displayTitle(a).localeCompare(displayTitle(b), undefined, {
+    sensitivity: 'base',
+  });
+  return titleCompare || createdAtTimestamp(b) - createdAtTimestamp(a) || b.id - a.id;
+}
+
+function compareByRecent(a: Location, b: Location): number {
+  return createdAtTimestamp(b) - createdAtTimestamp(a) || compareByName(a, b);
+}
+
+function searchText(location: Location): string {
+  return [
+    location.label,
+    location.weather.area,
+    location.weather.condition,
+    coordinatesText(location),
+    location.latitude.toString(),
+    location.longitude.toString(),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
 export function Sidebar() {
   const { locations, isLoading, error } = useStore();
   const [query, setQuery] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('recent');
   const message = errorMessage(error);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return locations;
-    return locations.filter((location) => {
-      const area = location.weather.area?.toLowerCase() ?? '';
-      const condition = location.weather.condition?.toLowerCase() ?? '';
-      return area.includes(q) || condition.includes(q);
+    const matched = q
+      ? locations.filter((location) => searchText(location).includes(q))
+      : locations;
+    return [...matched].sort((a, b) => {
+      const favoriteCompare = compareFavorites(a, b);
+      if (favoriteCompare) return favoriteCompare;
+      return sortMode === 'name' ? compareByName(a, b) : compareByRecent(a, b);
     });
-  }, [locations, query]);
+  }, [locations, query, sortMode]);
 
   return (
     <aside className="flex max-h-[62vh] w-full shrink-0 flex-col gap-3 border-b border-white/5 bg-black/20 p-4 pt-16 backdrop-blur-2xl md:h-full md:max-h-none md:min-h-0 md:w-[22rem] md:border-b-0 md:border-r md:pt-4">
@@ -37,9 +85,36 @@ export function Sidebar() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search"
+          placeholder="Search saved locations"
           className="w-full rounded-lg border border-white/10 bg-white/[0.08] py-2 pl-9 pr-3 text-sm text-white placeholder:text-white/50"
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/10 bg-white/[0.05] p-1">
+        <button
+          type="button"
+          onClick={() => setSortMode('recent')}
+          aria-pressed={sortMode === 'recent'}
+          className={`rounded-md px-2 py-1.5 text-xs font-semibold ${
+            sortMode === 'recent'
+              ? 'bg-white/90 text-slate-900'
+              : 'text-white/65 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          Recent
+        </button>
+        <button
+          type="button"
+          onClick={() => setSortMode('name')}
+          aria-pressed={sortMode === 'name'}
+          className={`rounded-md px-2 py-1.5 text-xs font-semibold ${
+            sortMode === 'name'
+              ? 'bg-white/90 text-slate-900'
+              : 'text-white/65 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          Name
+        </button>
       </div>
 
       <UseMyLocationButton />

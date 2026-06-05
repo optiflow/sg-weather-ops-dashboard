@@ -52,12 +52,24 @@ describe('buildWeatherRiskBrief', () => {
     );
 
     expect(brief.level).toBe('unavailable');
+    expect(brief.label).toBe('Refresh needed');
+    expect(brief.headline).toBe('Refresh Bishan to see the latest weather risk brief.');
+    expect(brief.recommendation).toBe(
+      'Tap Refresh before relying on this location for outdoor plans.',
+    );
+    expect(brief.confidenceLabel).toBe('No current update');
   });
 
   it('returns low risk for fresh fair weather', () => {
     const brief = buildWeatherRiskBrief(weather(), { now });
 
     expect(brief.level).toBe('low');
+    expect(brief.label).toBe('Looks okay');
+    expect(brief.headline).toBe('Outdoor plans look okay in Bishan.');
+    expect(brief.recommendation).toBe(
+      'No special action needed; keep an eye on normal weather changes.',
+    );
+    expect(brief.confidenceLabel).toBe('Updated recently');
     expect(brief.drivers).toHaveLength(0);
   });
 
@@ -68,7 +80,14 @@ describe('buildWeatherRiskBrief', () => {
     );
 
     expect(brief.level).toBe('high');
+    expect(brief.label).toBe('Take care');
+    expect(brief.headline).toBe('Rain or thunder could affect plans in Bishan.');
+    expect(brief.recommendation).toBe('Bring an umbrella and plan for shelter before heading out.');
     expect(brief.drivers[0]?.key).toBe('rain');
+    expect(brief.drivers[0]?.label).toBe('Rain or thunder');
+    expect(brief.drivers[0]?.advice).toBe(
+      'Bring an umbrella and plan for shelter before heading out.',
+    );
   });
 
   it('classifies UV thresholds', () => {
@@ -108,12 +127,22 @@ describe('buildWeatherRiskBrief', () => {
   });
 
   it('uses stale observations in risk state', () => {
-    expect(
-      buildWeatherRiskBrief(weather({ observed_at: '2026-05-03T23:00:00Z' }), { now }).level,
-    ).toBe('moderate');
-    expect(
-      buildWeatherRiskBrief(weather({ observed_at: '2026-05-03T13:00:00Z' }), { now }).level,
-    ).toBe('unavailable');
+    const staleBrief = buildWeatherRiskBrief(weather({ observed_at: '2026-05-03T23:00:00Z' }), {
+      now,
+    });
+    const unavailableBrief = buildWeatherRiskBrief(
+      weather({ observed_at: '2026-05-03T13:00:00Z' }),
+      { now },
+    );
+
+    expect(staleBrief.level).toBe('moderate');
+    expect(staleBrief.headline).toBe('Old update may affect outdoor plans in Bishan.');
+    expect(staleBrief.recommendation).toBe(
+      'Tap Refresh before relying on this for time-sensitive plans.',
+    );
+    expect(staleBrief.confidenceLabel).toBe('Older update');
+    expect(unavailableBrief.level).toBe('unavailable');
+    expect(unavailableBrief.confidenceLabel).toBe('Refresh needed');
   });
 
   it('adds a data coverage driver without hiding weather drivers', () => {
@@ -133,5 +162,12 @@ describe('buildWeatherRiskBrief', () => {
     expect(brief.level).toBe('high');
     expect(brief.drivers[0]?.key).toBe('rain');
     expect(brief.drivers.some((driver) => driver.key === 'coverage')).toBe(true);
+    expect(brief.drivers.find((driver) => driver.key === 'coverage')?.label).toBe(
+      'Incomplete readings',
+    );
+    expect(brief.confidenceLabel).toBe('Some readings missing');
+    expect(brief.confidenceDetail).toBe(
+      'A few weather readings are unavailable, so treat this as a quick guide.',
+    );
   });
 });

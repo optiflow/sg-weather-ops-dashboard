@@ -57,7 +57,9 @@ The client sends `Accept: application/json`, a `sg-weather-ops-dashboard/0.1 (ed
 
 The 2-hour forecast endpoint returns named forecast areas in `area_metadata`. Each area includes `label_location.latitude` and `label_location.longitude`.
 
-When the user clicks **Use my location**, the browser sends its current coordinates to `POST /api/locations/from-position`. The backend finds the nearest forecast area using squared Euclidean distance, then stores that area's label coordinate in SQLite. This keeps browser-derived locations canonical and makes duplicate clicks idempotent.
+`GET /api/forecast-areas` exposes this metadata as the sorted canonical forecast-area list used by the Add Location picker. Selecting a named area calls `POST /api/locations/from-area`, which stores the area's label coordinate in SQLite and returns the existing saved location when that coordinate is already present.
+
+When the user clicks **Use my location**, the browser sends its current coordinates to `POST /api/locations/from-position`. The backend finds the nearest forecast area using squared Euclidean distance, then stores that area's label coordinate in SQLite. This keeps picker-derived and browser-derived locations canonical and makes duplicate adds idempotent.
 
 ## Nearest-Station Matching
 
@@ -89,6 +91,8 @@ The backend and frontend share the same JSON field names for `WeatherSnapshot`:
 | Data trust | `data_quality.status`, `data_quality.last_refreshed_at`, `data_quality.unavailable_signals[]` |
 
 The database stores scalar fields as SQLite columns and stores `forecast_periods`, `daily_forecast`, and `data_quality` as JSON text columns through Drizzle's typed JSON mode.
+
+The app does not store historical readings or chart-ready time series. Those features are deferred until the Weather Risk Brief proves useful, because trend charts need append-only observation storage and query semantics that are separate from the current snapshot model.
 
 ## Data Quality Contract
 
@@ -144,14 +148,14 @@ The route behavior depends on where the failure occurs:
 
 ## Weather Risk Brief
 
-The Weather Risk Brief is a pure frontend interpretation of the latest `WeatherSnapshot`; it does not call a new provider and does not persist a separate risk score. `frontend/src/weatherRisk.ts` derives `Low`, `Moderate`, `High`, or `Unavailable` from:
+The Weather Risk Brief is a pure frontend interpretation of the latest `WeatherSnapshot`; it does not call a new provider and does not persist a separate risk score. `frontend/src/weatherRisk.ts` derives an underlying `Low`, `Moderate`, `High`, or `Unavailable` state from:
 
 - Rain/storm forecast text and rainfall.
 - UV, PSI, PM2.5, wind speed, and heat indicators.
 - Stale observations.
 - Missing or unavailable provider signals from `data_quality`.
 
-The brief is decision-support copy for the dashboard. It is not a production alerting system and should not replace official safety advisories.
+The component renders that state as plain-language decision support for everyday users: a status badge, a short headline, a recommended next step, confidence wording, and up to three things to watch. Technical refresh status and missing provider signals stay in `DataTrustStrip`. The brief is not a production alerting system and should not replace official safety advisories.
 
 ## Rendering Data
 
@@ -160,8 +164,8 @@ The frontend renders snapshot fields in these components:
 | Component | Data used |
 | --- | --- |
 | `Hero` | Area, temperature, condition, high/low, observed time, source, refresh action. |
-| `RiskBrief` | Latest snapshot metrics plus `data_quality` to derive the frontend risk level and drivers. |
-| `DataTrustStrip` | `data_quality.status`, `last_refreshed_at`, missing signals, and observation time. |
+| `RiskBrief` | Latest snapshot metrics plus `data_quality` to derive the frontend risk level, user-facing recommendation, confidence wording, and things to watch. |
+| `DataTrustStrip` | `data_quality.status`, `last_refreshed_at`, missing signals, and observation time for technical data trust. |
 | `HourlyStrip` | `forecast_periods` from the 24-hour regional forecast. |
 | `TenDayForecast` | `daily_forecast`; the current provider returns 4 days. |
 | `MapCard` | Saved coordinates and temperature/condition markers on Leaflet. |

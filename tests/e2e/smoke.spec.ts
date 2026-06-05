@@ -50,8 +50,16 @@ interface Location {
   id: number;
   latitude: number;
   longitude: number;
+  label: string | null;
+  is_favorite: boolean;
   created_at: string;
   weather: WeatherSnapshot;
+}
+
+interface ForecastArea {
+  name: string;
+  latitude: number;
+  longitude: number;
 }
 
 interface MatchedArea {
@@ -60,14 +68,36 @@ interface MatchedArea {
   longitude: number;
 }
 
+interface CreateLocationPayload {
+  latitude: number;
+  longitude: number;
+  label?: string | null;
+}
+
+interface FromAreaPayload {
+  name: string;
+  label?: string | null;
+}
+
 interface FromPositionResponse {
   location: Location;
   created: boolean;
   matched_area: MatchedArea;
 }
 
+type FromAreaResponse = FromPositionResponse;
+
+interface LocationUpdatePayload {
+  label?: string | null;
+  is_favorite?: boolean;
+}
+
 interface ApiMockOptions {
-  fromPosition?: (payload: { latitude: number; longitude: number }) => FromPositionResponse;
+  forecastAreas?: ForecastArea[];
+  create?: (payload: CreateLocationPayload) => Location;
+  fromArea?: (payload: FromAreaPayload) => FromAreaResponse;
+  fromPosition?: (payload: CreateLocationPayload) => FromPositionResponse;
+  update?: (id: number, payload: LocationUpdatePayload, current: Location) => Location;
   refresh?: (id: number) => Location;
 }
 
@@ -90,6 +120,8 @@ test('keeps the dashboard shell usable on mobile', async ({ page }) => {
   await expect(sidebar).toBeVisible();
   await expect(page.getByLabel('Search saved locations')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Use my location' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Bishan' })).toBeVisible();
+  await page.getByLabel('Theme').selectOption('cotton-candy');
 
   const sidebarBox = await sidebar.boundingBox();
   const searchBox = await page.getByLabel('Search saved locations').boundingBox();
@@ -101,15 +133,89 @@ test('keeps the dashboard shell usable on mobile', async ({ page }) => {
   ).toBe(true);
 });
 
-test('opens the add location form accessibly', async ({ page }) => {
-  await mockLocationApi(page, []);
+test('creates a forecast-area location with an optional label from the picker', async ({
+  page,
+}) => {
+  const fromAreaRequests: FromAreaPayload[] = [];
+  await mockLocationApi(page, [], {
+    forecastAreas: [
+      forecastArea('Bishan', 1.352, 103.849),
+      forecastArea('Changi', 1.364, 103.991),
+      forecastArea('Jurong West', 1.34, 103.706),
+    ],
+    fromArea: (payload) => {
+      fromAreaRequests.push(payload);
+      return {
+        location: location(
+          10,
+          payload.name,
+          { condition: 'Fair' },
+          { label: payload.label ?? null, latitude: 1.352, longitude: 103.849 },
+        ),
+        created: true,
+        matched_area: matchedArea(payload.name),
+      };
+    },
+  });
   await page.goto('/');
   await page.getByRole('button', { name: 'Add Location' }).click();
 
-  await expect(page.getByText('New coordinate')).toBeVisible();
+  await expect(page.getByLabel('Search forecast areas')).toBeVisible();
+  await expect(page.getByRole('option', { name: /Select Bishan/ })).toBeVisible();
+  await expect(page.getByRole('option', { name: /Select Changi/ })).toBeVisible();
+
+  await page.getByLabel('Search forecast areas').fill('chan');
+  await expect(page.getByRole('option', { name: /Select Changi/ })).toBeVisible();
+  await expect(page.getByRole('option', { name: /Select Bishan/ })).toHaveCount(0);
+
+  await page.getByLabel('Search forecast areas').fill('bish');
+  await page.getByRole('option', { name: /Select Bishan/ }).click();
+  await locationLabelInput(page).fill('Office');
+  await page.getByRole('button', { name: /Add selected area|Add forecast area/i }).click();
+
+  await expect(page.locator('aside')).toContainText('Office');
+  await expect(page.getByRole('main')).toContainText('Office');
+  await expect(page.getByRole('main')).toContainText('Bishan');
+  expect(fromAreaRequests).toEqual([{ name: 'Bishan', label: 'Office' }]);
+});
+
+test('keeps manual coordinate mode working', async ({ page }) => {
+  const createRequests: CreateLocationPayload[] = [];
+  await mockLocationApi(page, [], {
+    create: (payload) => {
+      createRequests.push(payload);
+      return location(
+        20,
+        null,
+        { condition: 'Not refreshed', data_quality: dataQuality('not_refreshed') },
+        {
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          label: payload.label ?? null,
+        },
+      );
+    },
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add Location' }).click();
+
+  const manualModeButton = page.getByRole('button', { name: /Coordinates/i });
+  if ((await manualModeButton.count()) > 0) {
+    await manualModeButton.click();
+  }
+
+  await expect(page.getByText('New location')).toBeVisible();
   await expect(page.getByLabel('Latitude')).toBeVisible();
   await expect(page.getByLabel('Longitude')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
+  await page.getByLabel('Latitude').fill('1.346');
+  await page.getByLabel('Longitude').fill('103.812');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+
+  await expect(
+    page.getByRole('main').getByRole('heading', { name: '1.346, 103.812' }),
+  ).toBeVisible();
+  expect(createRequests).toEqual([{ latitude: 1.346, longitude: 103.812 }]);
 });
 
 test('persists accessible theme selection', async ({ page }) => {
@@ -135,14 +241,29 @@ test('renders selected-location risk and data trust without fake primary labels'
 
   await expect(page.getByRole('heading', { name: 'Bishan' })).toBeVisible();
   const riskBrief = page.locator('section', { hasText: 'Weather Risk Brief' });
-  await expect(riskBrief).toContainText('High');
-  await expect(riskBrief).toContainText('Rain and storms');
+  await expect(riskBrief).toContainText('Take care');
+  await expect(riskBrief).toContainText('Rain or thunder could affect plans in Bishan.');
+  await expect(riskBrief).toContainText(
+    'Bring an umbrella and plan for shelter before heading out.',
+  );
 
   const dataTrust = page.locator('section', { hasText: 'Data Trust' });
   await expect(dataTrust).toContainText('Partial');
   await expect(dataTrust).toContainText('Missing UV');
   await expect(page.getByText('Home', { exact: true })).toHaveCount(0);
   await expect(page.getByText('My Location', { exact: true })).toHaveCount(0);
+});
+
+test('shows saved labels in the sidebar and selected-location view', async ({ page }) => {
+  await mockLocationApi(page, [
+    location(1, 'Bishan', { condition: 'Cloudy' }, { label: 'Office' }),
+  ]);
+  await page.goto('/');
+
+  await expect(page.locator('aside')).toContainText('Office');
+  await expect(page.locator('aside')).toContainText('Bishan');
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Office' })).toBeVisible();
+  await expect(page.getByRole('main')).toContainText('Bishan');
 });
 
 test('filters saved locations by accessible search', async ({ page }) => {
@@ -156,6 +277,52 @@ test('filters saved locations by accessible search', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: /Select Changi/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Select Bishan/ })).toHaveCount(0);
+});
+
+test('renames, clears, favorites, unfavorites, and sorts saved locations', async ({ page }) => {
+  const patchRequests: Array<{ id: number; payload: LocationUpdatePayload }> = [];
+  await mockLocationApi(
+    page,
+    [
+      location(1, 'Changi', {}, { created_at: '2026-06-05T03:00:00.000Z' }),
+      location(2, 'Bishan', {}, { created_at: '2026-06-05T01:00:00.000Z', label: 'Office' }),
+    ],
+    {
+      update: (id, payload, current) => {
+        patchRequests.push({ id, payload });
+        return updatedLocation(current, payload);
+      },
+    },
+  );
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /Select (Office|Bishan)/ }).click();
+  await page.getByRole('button', { name: /Rename (Office|Bishan)/ }).click();
+  await locationLabelInput(page).fill('Home base');
+  await page.getByRole('button', { name: /Save label/i }).click();
+
+  await expect(page.getByRole('main')).toContainText('Home base');
+  expect(patchRequests).toContainEqual({ id: 2, payload: { label: 'Home base' } });
+
+  await page.getByRole('button', { name: /Rename Home base/ }).click();
+  await page.getByRole('button', { name: /Clear label/i }).click();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Bishan' })).toBeVisible();
+  await expect(page.getByRole('main')).not.toContainText('Home base');
+  expect(patchRequests).toContainEqual({ id: 2, payload: { label: null } });
+
+  await page.getByRole('button', { name: /Favorite Bishan/ }).click();
+  await expect(page.getByRole('button', { name: /Unfavorite Bishan/ })).toBeVisible();
+  expect(patchRequests).toContainEqual({ id: 2, payload: { is_favorite: true } });
+
+  await page.getByRole('button', { name: /Unfavorite Bishan/ }).click();
+  await expect(page.getByRole('button', { name: /Favorite Bishan/ })).toBeVisible();
+  expect(patchRequests).toContainEqual({ id: 2, payload: { is_favorite: false } });
+
+  await chooseLocationSort(page, 'Name');
+  await expectSidebarOrder(page, /Select Bishan/, /Select Changi/);
+
+  await chooseLocationSort(page, 'Recent');
+  await expectSidebarOrder(page, /Select Changi/, /Select Bishan/);
 });
 
 test('reports browser geolocation partial-success locally', async ({ page }) => {
@@ -265,18 +432,58 @@ async function mockLocationApi(
   options: ApiMockOptions = {},
 ) {
   let locations = initialLocations.map(cloneLocation);
+  let nextLocationId = Math.max(0, ...locations.map((location) => location.id)) + 1;
+  const forecastAreas = options.forecastAreas ?? [
+    forecastArea('Bishan', 1.352, 103.849),
+    forecastArea('Changi', 1.364, 103.991),
+    forecastArea('Jurong West', 1.34, 103.706),
+  ];
 
   await page.route('**/api/logs', (route) => route.fulfill({ status: 204, body: '' }));
   await page.route('https://*.basemaps.cartocdn.com/**', (route) =>
     route.fulfill({ status: 204, body: '' }),
   );
 
+  await page.route('**/api/forecast-areas', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    await fulfillJson(route, { areas: forecastAreas });
+  });
+
+  await page.route('**/api/locations/from-area', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fallback();
+      return;
+    }
+    const payload = route.request().postDataJSON() as FromAreaPayload;
+    const area = forecastAreas.find((candidate) => candidate.name === payload.name);
+    const fallbackLocation = location(
+      nextLocationId++,
+      payload.name,
+      { condition: 'Not refreshed', data_quality: dataQuality('not_refreshed') },
+      {
+        latitude: area?.latitude ?? 1.352,
+        longitude: area?.longitude ?? 103.849,
+        label: payload.label ?? null,
+      },
+    );
+    const response = options.fromArea?.(payload) ?? {
+      location: fallbackLocation,
+      created: true,
+      matched_area: matchedArea(payload.name, area),
+    };
+    locations = upsertLocation(locations, response.location);
+    await fulfillJson(route, response, response.created ? 201 : 200);
+  });
+
   await page.route('**/api/locations/from-position', async (route) => {
     if (route.request().method() !== 'POST') {
       await route.fallback();
       return;
     }
-    const payload = route.request().postDataJSON() as { latitude: number; longitude: number };
+    const payload = route.request().postDataJSON() as CreateLocationPayload;
     const response = options.fromPosition?.(payload) ?? {
       location: locations[0],
       created: false,
@@ -310,6 +517,21 @@ async function mockLocationApi(
 
   await page.route(/\/api\/locations\/\d+$/, async (route) => {
     const id = locationId(route.request().url());
+    if (route.request().method() === 'PATCH') {
+      const payload = route.request().postDataJSON() as LocationUpdatePayload;
+      const found = locations.find((location) => location.id === id);
+      if (!found) {
+        await fulfillJson(route, { detail: 'Location not found' }, 404);
+        return;
+      }
+      const updated =
+        options.update?.(id, payload, cloneLocation(found)) ?? updatedLocation(found, payload);
+      locations = locations.map((location) =>
+        location.id === id ? cloneLocation(updated) : location,
+      );
+      await fulfillJson(route, updated);
+      return;
+    }
     if (route.request().method() === 'DELETE') {
       locations = locations.filter((location) => location.id !== id);
       await route.fulfill({ status: 204, body: '' });
@@ -322,6 +544,24 @@ async function mockLocationApi(
   await page.route('**/api/locations', async (route) => {
     if (route.request().method() === 'GET') {
       await fulfillJson(route, { locations });
+      return;
+    }
+    if (route.request().method() === 'POST') {
+      const payload = route.request().postDataJSON() as CreateLocationPayload;
+      const created =
+        options.create?.(payload) ??
+        location(
+          nextLocationId++,
+          null,
+          { condition: 'Not refreshed', data_quality: dataQuality('not_refreshed') },
+          {
+            latitude: payload.latitude,
+            longitude: payload.longitude,
+            label: payload.label ?? null,
+          },
+        );
+      locations = upsertLocation(locations, created);
+      await fulfillJson(route, created, 201);
       return;
     }
     await fulfillJson(route, { detail: 'Unexpected test request' }, 500);
@@ -381,14 +621,17 @@ async function mockBrowserGeolocationError(page: Page, code: number) {
 
 function location(
   id: number,
-  area: string,
+  area: string | null,
   weatherOverrides: Partial<WeatherSnapshot> = {},
+  locationOverrides: Partial<Omit<Location, 'id' | 'weather'>> = {},
 ): Location {
   return {
     id,
-    latitude: 1.352 + id / 1000,
-    longitude: 103.849 + id / 1000,
-    created_at: new Date().toISOString(),
+    latitude: locationOverrides.latitude ?? 1.352 + id / 1000,
+    longitude: locationOverrides.longitude ?? 103.849 + id / 1000,
+    label: locationOverrides.label ?? null,
+    is_favorite: locationOverrides.is_favorite ?? false,
+    created_at: locationOverrides.created_at ?? new Date().toISOString(),
     weather: {
       condition: 'Cloudy',
       observed_at: new Date().toISOString(),
@@ -432,17 +675,59 @@ function dataQuality(
   };
 }
 
-function matchedArea(name: string): MatchedArea {
+function forecastArea(name: string, latitude: number, longitude: number): ForecastArea {
   return {
     name,
-    latitude: 1.352,
-    longitude: 103.849,
+    latitude,
+    longitude,
+  };
+}
+
+function matchedArea(name: string, area?: ForecastArea): MatchedArea {
+  return {
+    name,
+    latitude: area?.latitude ?? 1.352,
+    longitude: area?.longitude ?? 103.849,
   };
 }
 
 function locationId(url: string): number {
   const match = new URL(url).pathname.match(/\/api\/locations\/(\d+)/);
   return match ? Number(match[1]) : Number.NaN;
+}
+
+function updatedLocation(location: Location, payload: LocationUpdatePayload): Location {
+  return {
+    ...cloneLocation(location),
+    label: payload.label === undefined ? location.label : payload.label,
+    is_favorite: payload.is_favorite === undefined ? location.is_favorite : payload.is_favorite,
+  };
+}
+
+function upsertLocation(locations: Location[], next: Location): Location[] {
+  return [
+    cloneLocation(next),
+    ...locations.filter((location) => location.id !== next.id).map(cloneLocation),
+  ];
+}
+
+function locationLabelInput(page: Page) {
+  return page.getByLabel(/^(Label \(optional\)|Location label)$/i);
+}
+
+async function chooseLocationSort(page: Page, label: 'Recent' | 'Name') {
+  const sortSelect = page.getByLabel('Sort locations');
+  if ((await sortSelect.count()) > 0) {
+    await sortSelect.selectOption({ label });
+    return;
+  }
+  await page.getByRole('button', { name: new RegExp(`^(Sort by )?${label}$`, 'i') }).click();
+}
+
+async function expectSidebarOrder(page: Page, first: RegExp, second: RegExp) {
+  const locationButtons = page.locator('aside').getByRole('button', { name: /^Select / });
+  await expect(locationButtons.nth(0)).toHaveAccessibleName(first);
+  await expect(locationButtons.nth(1)).toHaveAccessibleName(second);
 }
 
 function cloneLocation(value: Location): Location {

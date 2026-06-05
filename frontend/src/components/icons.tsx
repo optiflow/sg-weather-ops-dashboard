@@ -70,6 +70,33 @@ export function RefreshIcon({ className = 'h-4 w-4', ...props }: IconProps) {
   );
 }
 
+interface StarIconProps extends IconProps {
+  filled?: boolean;
+}
+
+export function StarIcon({ className = 'h-4 w-4', filled = false, ...props }: StarIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      {...base}
+      fill={filled ? 'currentColor' : 'none'}
+      {...props}
+    >
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9L7.5 14 3 9.6l6.2-.9Z" />
+    </svg>
+  );
+}
+
+export function PencilIcon({ className = 'h-4 w-4', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base} {...props}>
+      <path d="m4 20 4.8-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" />
+      <path d="m14 7 3 3" />
+    </svg>
+  );
+}
+
 export function MoonIcon({ className = 'h-12 w-12', ...props }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor" {...props}>
