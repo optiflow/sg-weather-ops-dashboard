@@ -19,6 +19,12 @@ npm install
 
 The install bootstraps the React frontend, Express backend, and Astro Starlight docs workspace in one step.
 
+Install Playwright browser binaries before running the browser smoke test or pushing through the Lefthook `pre-push` hook:
+
+```bash
+npx playwright install
+```
+
 ## Start the App
 
 ```bash

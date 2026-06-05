@@ -17,7 +17,7 @@ Run all commands from the **root directory**.
 - `npm run lint:ci`: Runs Biome's CI check.
 - `npm run format`: Formats the codebase with Biome.
 - `npx playwright install`: Installs browser binaries required by Playwright.
-- `npx lefthook validate`: Validates the Git hook configuration.
+- `npx --no-install lefthook validate`: Validates the Git hook configuration.
 
 Before finishing code changes, run the core project quality gate from the root:
 
@@ -28,6 +28,16 @@ npm run lint
 ```
 
 Run `npm run test:e2e` for browser-facing changes. It also runs in CI and the Lefthook `pre-push` hook.
+
+For hook smoke tests, force Lefthook to run even when no files are staged:
+
+```bash
+npx --no-install lefthook validate
+npx --no-install lefthook run pre-commit --force --no-auto-install
+npx --no-install lefthook run pre-push --force --no-auto-install
+```
+
+On a fresh clone, run `npx playwright install` before expecting `npm run test:e2e` or the Lefthook `pre-push` hook to pass locally.
 
 In sandboxed agent environments, `npm test` and `npm run test:e2e` may need permission to bind a local port. If either command fails with `listen EPERM`, rerun the same command with the required permission.
 

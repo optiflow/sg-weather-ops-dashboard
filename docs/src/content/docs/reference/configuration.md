@@ -96,11 +96,13 @@ Uses `biome.json` at the root for both linting and formatting:
 - Configured to mimic Prettier defaults (single quotes, trailing commas)
 - `docs/**` is excluded from linting (uses separate Astro config)
 
-Local hooks run `npm run lint`, while GitHub Actions runs `npm run lint:ci`.
+Local hooks run `npm run lint` (`biome check .`), while GitHub Actions runs `npm run lint:ci` (`biome ci .`).
 
 ## Quality Automation
 
-Lefthook is installed through the root `prepare` script. The `pre-commit` hook runs Biome and Vitest. The `pre-push` hook runs the production build and Playwright smoke test.
+Lefthook is installed through the root `prepare` script. The hooks are full-repo quality gates, so they intentionally do not use staged-file scoping. The `pre-commit` hook runs Biome and Vitest. The `pre-push` hook runs the production build and Playwright smoke test.
+
+On a fresh clone, run `npx playwright install` before expecting the Playwright smoke test or Lefthook `pre-push` hook to pass locally.
 
 The GitHub Actions quality workflow installs dependencies with `npm ci`, installs the Chromium browser used by Playwright, then runs Vitest, the production build, Biome CI, and the Playwright smoke test.
 
