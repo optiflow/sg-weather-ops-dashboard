@@ -53,7 +53,8 @@ This is the product-management value of the case study: the AI tools accelerate 
 | Evidence | What to inspect |
 | --- | --- |
 | [README](https://github.com/optiflow/sg-weather-ops-dashboard/blob/main/README.md) | Product context, feature summary, architecture sketch, commands, and project map. |
-| [Use my location plan](https://github.com/optiflow/sg-weather-ops-dashboard/blob/main/plans/use-my-location-forecast-area-add.md) | Example of turning a product request into vertical slices and acceptance criteria. |
+| [Reviewer Guide](/sg-weather-ops-dashboard/guides/reviewer-guide/) | 15-minute review path, trust checks, accessibility checks, and definition of done. |
+| [Use my location plan](https://github.com/optiflow/sg-weather-ops-dashboard/blob/main/plans/use-my-location-forecast-area-add.md) | Archived example of turning a product request into vertical slices and acceptance criteria. |
 | [Agent operating contract](https://github.com/optiflow/sg-weather-ops-dashboard/blob/main/AGENTS.md) | Agent-facing rules for assumptions, scope control, verification, docs, and safety. |
 | [Repo skills](https://github.com/optiflow/sg-weather-ops-dashboard/tree/main/.agents/skills) | Repeatable workflows for weather features, database migrations, visual QA, and final quality gates. |
 | [API Endpoints](/sg-weather-ops-dashboard/reference/api-endpoints/) | Backend request/response contracts and error behavior. |

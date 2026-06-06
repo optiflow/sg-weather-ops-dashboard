@@ -10,6 +10,7 @@ import {
   updateLocation,
 } from '../api';
 import type {
+  BrowserPositionPayload,
   CreateLocationFromAreaPayload,
   CreateLocationPayload,
   Location,
@@ -57,8 +58,10 @@ export function StoreProvider({ children }: ProviderProps) {
 
   const create = useCallback(
     async (payload: CreateLocationPayload) => {
-      setError(null);
-      logInteraction('location_create_submitted', payload);
+      logInteraction('location_create_submitted', {
+        coordinateSource: 'manual',
+        hasLabel: Boolean(payload.label?.trim()),
+      });
       try {
         const created = await createLocation(payload);
         const next = await load();
@@ -67,14 +70,13 @@ export function StoreProvider({ children }: ProviderProps) {
         setIsAdding(false);
         logInteraction('location_created', {
           locationId: targetId,
-          latitude: created.latitude,
-          longitude: created.longitude,
+          coordinateSource: 'manual',
+          hasLabel: Boolean(created.label?.trim()),
         });
       } catch (err) {
-        setError(err);
         logInteraction('location_create_failed', {
-          latitude: payload.latitude,
-          longitude: payload.longitude,
+          coordinateSource: 'manual',
+          hasLabel: Boolean(payload.label?.trim()),
           error: err instanceof Error ? err.message : 'Unknown error',
         });
         throw err;
@@ -85,7 +87,6 @@ export function StoreProvider({ children }: ProviderProps) {
 
   const createFromArea = useCallback(
     async (payload: CreateLocationFromAreaPayload): Promise<LocationFromAreaResponse> => {
-      setError(null);
       logInteraction('location_from_area_submitted', {
         area: payload.name,
         hasLabel: Boolean(payload.label?.trim()),
@@ -103,7 +104,6 @@ export function StoreProvider({ children }: ProviderProps) {
         });
         return result;
       } catch (err) {
-        setError(err);
         logInteraction('location_from_area_failed', {
           area: payload.name,
           error: err instanceof Error ? err.message : 'Unknown error',
@@ -115,8 +115,7 @@ export function StoreProvider({ children }: ProviderProps) {
   );
 
   const createFromPosition = useCallback(
-    async (payload: CreateLocationPayload): Promise<LocationFromPositionResponse> => {
-      setError(null);
+    async (payload: BrowserPositionPayload): Promise<LocationFromPositionResponse> => {
       logInteraction('location_from_position_submitted');
       try {
         const result = await createLocationFromPosition(payload);
@@ -139,7 +138,6 @@ export function StoreProvider({ children }: ProviderProps) {
 
   const update = useCallback(
     async (id: number, payload: UpdateLocationPayload): Promise<Location> => {
-      setError(null);
       logInteraction('location_update_submitted', {
         locationId: id,
         hasLabel: payload.label === undefined ? undefined : Boolean(payload.label?.trim()),
@@ -157,7 +155,6 @@ export function StoreProvider({ children }: ProviderProps) {
         });
         return updated;
       } catch (err) {
-        setError(err);
         logInteraction('location_update_failed', {
           locationId: id,
           error: err instanceof Error ? err.message : 'Unknown error',
@@ -171,18 +168,17 @@ export function StoreProvider({ children }: ProviderProps) {
   const refresh = useCallback(
     async (id: number) => {
       setRefreshingId(id);
-      setError(null);
       logInteraction('location_refresh_clicked', { locationId: id });
       try {
         await refreshLocation(id);
         await load();
         logInteraction('location_refreshed', { locationId: id });
       } catch (err) {
-        setError(err);
         logInteraction('location_refresh_failed', {
           locationId: id,
           error: err instanceof Error ? err.message : 'Unknown error',
         });
+        throw err;
       } finally {
         setRefreshingId(null);
       }
@@ -192,7 +188,6 @@ export function StoreProvider({ children }: ProviderProps) {
 
   const remove = useCallback(
     async (id: number) => {
-      setError(null);
       logInteraction('location_delete_submitted', { locationId: id });
       try {
         await deleteLocation(id);
@@ -202,7 +197,6 @@ export function StoreProvider({ children }: ProviderProps) {
         }
         logInteraction('location_deleted', { locationId: id });
       } catch (err) {
-        setError(err);
         logInteraction('location_delete_failed', {
           locationId: id,
           error: err instanceof Error ? err.message : 'Unknown error',

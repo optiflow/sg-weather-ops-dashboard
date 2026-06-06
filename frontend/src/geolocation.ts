@@ -1,4 +1,4 @@
-import type { CreateLocationPayload } from './types';
+import type { BrowserPositionPayload } from './types';
 
 const GEOLOCATION_OPTIONS: PositionOptions = {
   enableHighAccuracy: false,
@@ -6,7 +6,7 @@ const GEOLOCATION_OPTIONS: PositionOptions = {
   maximumAge: 300000,
 };
 
-export function getBrowserPosition(): Promise<CreateLocationPayload> {
+export function getBrowserPosition(): Promise<BrowserPositionPayload> {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return Promise.reject(new Error('Browser location is not available here.'));
   }

@@ -1,6 +1,8 @@
 # Plan: Use My Location Forecast-Area Add
 
 > Source PRD: Conversation PRD for adding a "Use my location" button that resolves browser coordinates to the nearest Singapore forecast area.
+>
+> Status: Implemented and archived. The current reviewer path is documented in [Reviewer Guide](../docs/src/content/docs/guides/reviewer-guide.md). Implemented API and user-flow behavior is documented in [API Endpoints](../docs/src/content/docs/reference/api-endpoints.md) and [Adding Locations](../docs/src/content/docs/guides/adding-locations.md).
 
 ## Architectural decisions
 

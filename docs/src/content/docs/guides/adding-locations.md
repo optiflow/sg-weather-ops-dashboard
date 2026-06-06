@@ -23,6 +23,8 @@ Coordinates must be JSON numbers. Numeric strings such as `"1.35"` are rejected.
 
 The frontend loads picker options from `GET /api/forecast-areas`. The endpoint returns `{ areas: [...] }`, sorted by canonical 2-hour forecast area name, using the same area names and label coordinates that the backend uses for browser geolocation matching.
 
+The picker uses a labelled search input plus a native labelled **Forecast area** select. Loading, retry, no-match, submit-error, success, and warning states stay local to the add form and are exposed to assistive technology with `aria-live` or `role="alert"`.
+
 The backend then:
 
 1. Validates the submitted `name` against the canonical forecast-area list.
@@ -82,6 +84,8 @@ The app selects the existing location instead of creating a duplicate. If a `lab
 4. Optionally enter a personal label, capped at 40 characters.
 5. Submit the form. The frontend calls `POST /api/locations`.
 
+The API accepts an optional `label`, but the current dashboard manual-coordinate form keeps the flow focused on explicit latitude/longitude testing. A saved manual location can be renamed after save from the selected location card.
+
 The backend then:
 
 1. Validates finite numeric coordinates inside the Singapore range.
@@ -133,6 +137,8 @@ The frontend:
 1. Calls `navigator.geolocation.getCurrentPosition()`.
 2. Uses a 10 second timeout and a 5 minute maximum cached position age.
 3. Sends the browser latitude and longitude to `POST /api/locations/from-position`.
+
+Frontend interaction telemetry for this flow does not include raw browser latitude or longitude. The backend `/api/logs` handler also redacts coordinate-like metadata keys before logging.
 
 The backend:
 
@@ -200,7 +206,7 @@ Click the **Refresh** button in the Data Trust strip on a location's detail view
 4. Records a refresh attempt and a weather observation when a fetched snapshot is captured.
 5. Returns the updated location.
 
-Individual provider failures can still produce a partial or `Unavailable` snapshot. The response includes `weather.data_quality`, which the UI renders in the Data Trust strip. If the weather client rejects outside that settled endpoint flow, the endpoint returns `502 Bad Gateway`.
+Individual provider failures can still produce a partial or `Unavailable` snapshot. The response includes `weather.data_quality`, which the UI renders in the Data Trust strip. If the weather client rejects outside that settled endpoint flow, the endpoint returns `502 Bad Gateway`, and the dashboard shows the error beside the selected location's **Refresh** button.
 
 Recent manual refreshes can be throttled, and overlapping refreshes for the same location can be coalesced. The latest snapshot remains the main dashboard state; recent observation rows are available through `GET /api/locations/:id/history`.
 
@@ -250,6 +256,6 @@ Saved locations support **Recent** and **Name** sorting. Favorites always appear
 | `isAdding` | Whether the add-location panel is visible. |
 | `isLoading` | Initial list load state. |
 | `refreshingId` | Location currently being refreshed. |
-| `error` | Last store or API error. Geolocation status is local to `UseMyLocationButton`. |
+| `error` | Initial/list-load error shown by the sidebar. Mutation errors are thrown back to the caller so Add Location, Use my location, refresh, and card actions can render local feedback. |
 
-The sidebar owns local search and sort state. Every area create, manual-coordinate create, browser-position create, metadata update, refresh, and delete action logs a frontend event to `POST /api/logs`. Logging failures are intentionally ignored by the UI.
+The sidebar owns local search and sort state. Every area create, manual-coordinate create, browser-position create, metadata update, refresh, and delete action logs a frontend event to `POST /api/logs`. Logging failures are intentionally ignored by the UI, and coordinate-like metadata is redacted before the backend writes structured logs.

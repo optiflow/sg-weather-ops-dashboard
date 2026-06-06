@@ -18,6 +18,7 @@ export function SidebarCard({ location, onSelected }: SidebarCardProps) {
   const [draftLabel, setDraftLabel] = useState(location.label ?? '');
   const [isSavingLabel, setIsSavingLabel] = useState(false);
   const [isSavingFavorite, setIsSavingFavorite] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const isSelected = selectedId === location.id;
   const observed = formatTime(location.weather.observed_at);
@@ -72,6 +73,18 @@ export function SidebarCard({ location, onSelected }: SidebarCardProps) {
     }
   };
 
+  const onDelete = async () => {
+    setIsDeleting(true);
+    setUpdateError(null);
+    try {
+      await remove(location.id);
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : 'Could not delete location');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div
       className={`group relative w-full cursor-pointer overflow-hidden rounded-2xl border text-left backdrop-blur-xl transition ${
@@ -105,17 +118,19 @@ export function SidebarCard({ location, onSelected }: SidebarCardProps) {
               <button
                 type="button"
                 onClick={() => setIsConfirmingDelete(false)}
+                disabled={isDeleting}
                 className="rounded-full px-2 py-1 text-[10px] font-semibold text-white/70 hover:bg-white/10 hover:text-white"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={() => void remove(location.id)}
+                onClick={() => void onDelete()}
+                disabled={isDeleting}
                 className="rounded-full bg-red-400/90 px-2 py-1 text-[10px] font-semibold text-white hover:bg-red-300"
                 aria-label={`Confirm delete ${title}`}
               >
-                Delete
+                {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           ) : (
@@ -149,6 +164,7 @@ export function SidebarCard({ location, onSelected }: SidebarCardProps) {
                 onClick={() => {
                   setIsConfirmingDelete(true);
                   setIsEditingLabel(false);
+                  setUpdateError(null);
                 }}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-black/10 text-white/55 transition hover:bg-white/10 hover:text-white"
                 aria-label={`Delete ${title}`}
@@ -221,7 +237,9 @@ export function SidebarCard({ location, onSelected }: SidebarCardProps) {
         </form>
       )}
       {updateError && (
-        <p className="mx-4 mb-3 mt-2 status-message status-message-error">{updateError}</p>
+        <p role="alert" className="mx-4 mb-3 mt-2 status-message status-message-error">
+          {updateError}
+        </p>
       )}
     </div>
   );

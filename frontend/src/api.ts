@@ -1,4 +1,5 @@
 import type {
+  BrowserPositionPayload,
   CreateLocationFromAreaPayload,
   CreateLocationPayload,
   ForecastArea,
@@ -64,7 +65,7 @@ export const createLocationFromArea = (payload: CreateLocationFromAreaPayload) =
     body: JSON.stringify(payload),
   });
 
-export const createLocationFromPosition = (payload: CreateLocationPayload) =>
+export const createLocationFromPosition = (payload: BrowserPositionPayload) =>
   request<LocationFromPositionResponse>('/locations/from-position', {
     method: 'POST',
     body: JSON.stringify(payload),

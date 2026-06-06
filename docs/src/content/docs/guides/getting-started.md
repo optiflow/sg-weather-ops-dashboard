@@ -113,6 +113,7 @@ The repository also includes `frontend/.env.local.example` for a standalone Vite
 | `npm run build` | Builds the frontend and type-checks the backend. |
 | `npm run start` | Runs the compiled production server from `backend/dist/server.js`. |
 | `npm test` | Runs Vitest and Supertest backend tests. |
+| `npm run test:e2e` | Runs the Playwright smoke test. |
 | `npm run lint` | Runs Biome checks. |
 | `npm run format` | Formats with Biome. |
 | `npm run doctor` | Runs local diagnostics. |
@@ -140,6 +141,8 @@ npm run docs:build
 npm run docs:check
 npm run lint
 ```
+
+For browser-facing changes or reviewer handoff, also run `npm run test:e2e`. CI already runs the full gate: tests, app build, docs build, Biome CI, and Playwright smoke.
 
 Tests create a temporary SQLite database and inject a mock weather client, so they do not call data.gov.sg.
 

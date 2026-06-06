@@ -31,7 +31,13 @@ npm run docs:check
 npm run lint
 ```
 
-Run `npm run test:e2e` for browser-facing changes. It also runs in CI and the Lefthook `pre-push` hook.
+For browser-facing changes or reviewer handoff, also run:
+
+```bash
+npm run test:e2e
+```
+
+CI already runs the full gate: `npm test`, `npm run build`, `npm run docs:build`, `npm run lint:ci`, and `npm run test:e2e`. Lefthook splits local coverage across `pre-commit` and `pre-push`; do not change workflow behavior unless the task explicitly asks for it.
 
 For hook smoke tests, force Lefthook to run even when no files are staged:
 

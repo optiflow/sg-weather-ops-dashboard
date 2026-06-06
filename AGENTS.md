@@ -84,7 +84,7 @@ Run commands from the repository root.
 | `npm run reset` | Reset local state. |
 | `npm run doctor` | Run local diagnostics. |
 
-Required quality gate before completing code or documentation changes when feasible:
+Required core quality gate before completing code or documentation changes when feasible:
 
 ```bash
 npm test
@@ -93,7 +93,9 @@ npm run docs:build
 npm run lint
 ```
 
-If `npm test` fails with `listen EPERM` in a sandbox, rerun the same command with the required permission instead of treating it as an application failure.
+For browser-facing changes or reviewer handoff, also run `npm run test:e2e`. CI already runs the full gate: tests, app build, docs build, lint, and Playwright smoke. Do not change workflow behavior unless the task explicitly asks for it.
+
+If `npm test` or `npm run test:e2e` fails with `listen EPERM` in a sandbox, rerun the same command with the required permission instead of treating it as an application failure.
 
 ## Working Contract
 

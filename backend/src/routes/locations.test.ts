@@ -513,6 +513,35 @@ describe('locations API', () => {
     expect(response.body).toEqual({ detail: 'Location already exists' });
   });
 
+  it('trims, clears, and validates manual create labels', async () => {
+    const trimmed = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85, label: ' Home ' })
+      .expect(201);
+    expect(trimmed.body.label).toBe('Home');
+
+    const empty = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.36, longitude: 103.86, label: '   ' })
+      .expect(201);
+    expect(empty.body.label).toBeNull();
+
+    const nullable = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.37, longitude: 103.87, label: null })
+      .expect(201);
+    expect(nullable.body.label).toBeNull();
+
+    await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.38, longitude: 103.88, label: 'x'.repeat(41) })
+      .expect(422);
+    await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.38, longitude: 103.88, label: 42 })
+      .expect(422);
+  });
+
   it('updates, clears, and validates saved-location metadata', async () => {
     const createResponse = await request(app)
       .post('/api/locations')
