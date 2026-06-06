@@ -19,6 +19,17 @@ const stream =
 export const logger = pino(
   {
     level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'test' ? 'silent' : 'info'),
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.headers["x-api-key"]',
+        'headers.authorization',
+        'headers.cookie',
+        'headers["x-api-key"]',
+      ],
+      remove: true,
+    },
     base: {
       service: 'sg-weather-ops-dashboard',
     },

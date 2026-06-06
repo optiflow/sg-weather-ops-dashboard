@@ -7,13 +7,16 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 describe('server API', () => {
   let tempDir: string;
   let app: Awaited<ReturnType<typeof import('./server.js').createApp>>;
+  let sanitizeFrontendLogPayload: typeof import('./server.js').sanitizeFrontendLogPayload;
 
   beforeAll(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'sg-weather-ops-dashboard-server-test-'));
     process.env.DATABASE_PATH = join(tempDir, 'weather.db');
     process.env.LOG_LEVEL = 'silent';
 
-    const { createApp } = await import('./server.js');
+    const server = await import('./server.js');
+    const { createApp } = server;
+    sanitizeFrontendLogPayload = server.sanitizeFrontendLogPayload;
     app = await createApp({
       serveFrontend: false,
       enableRequestLogging: false,
@@ -28,6 +31,19 @@ describe('server API', () => {
     const response = await request(app).get('/health').expect(200);
 
     expect(response.body).toEqual({ status: 'healthy' });
+  });
+
+  it('returns readiness without checking the weather provider', async () => {
+    const response = await request(app).get('/ready').expect(200);
+
+    expect(response.body).toEqual({
+      status: 'ready',
+      checks: {
+        database: 'ready',
+        migrations: 'ready',
+        weather_provider: 'not_checked',
+      },
+    });
   });
 
   it('sets security headers on backend responses', async () => {
@@ -47,6 +63,29 @@ describe('server API', () => {
         page: '/',
       })
       .expect(204);
+  });
+
+  it('sanitizes frontend log metadata to an allowlist', () => {
+    expect(
+      sanitizeFrontendLogPayload({
+        event: 'location_created',
+        metadata: {
+          locationId: 1,
+          area: 'Bishan',
+          created: true,
+          latitude: 1.35,
+          longitude: 103.85,
+          token: 'secret',
+          error: 'raw stack',
+          query: 'token=secret',
+        },
+        page: '/dashboard?token=secret#hash',
+      }),
+    ).toEqual({
+      event: 'location_created',
+      metadata: { locationId: 1, area: 'Bishan', created: true },
+      page: '/dashboard',
+    });
   });
 
   it('rejects invalid frontend interaction log events', async () => {

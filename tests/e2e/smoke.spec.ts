@@ -1,6 +1,7 @@
 import { expect, type Page, type Route, test } from '@playwright/test';
 
 type RefreshStatus = 'unknown' | 'not_refreshed' | 'complete' | 'partial' | 'unavailable';
+type FreshnessStatus = 'unknown' | 'not_refreshed' | 'fresh' | 'stale';
 
 type WeatherSignal =
   | 'two_hour_forecast'
@@ -43,7 +44,18 @@ interface WeatherSnapshot {
     status: RefreshStatus;
     last_refreshed_at: string | null;
     unavailable_signals: WeatherSignal[];
+    freshness_status: FreshnessStatus;
+    stale_signals: WeatherSignal[];
   };
+}
+
+interface WeatherObservation {
+  id: number;
+  location_id: number;
+  refresh_attempt_id: number;
+  captured_at: string;
+  observed_at: string | null;
+  weather: WeatherSnapshot;
 }
 
 interface Location {
@@ -99,7 +111,10 @@ interface ApiMockOptions {
   fromPosition?: (payload: CreateLocationPayload) => FromPositionResponse;
   update?: (id: number, payload: LocationUpdatePayload, current: Location) => Location;
   refresh?: (id: number) => Location;
+  history?: (id: number) => WeatherObservation[];
 }
+
+const THEMES = ['apple', 'cotton-candy', 'night-city', 'pixel', 'terminal'] as const;
 
 test('loads the dashboard shell', async ({ page }) => {
   await mockLocationApi(page, []);
@@ -133,6 +148,28 @@ test('keeps the dashboard shell usable on mobile', async ({ page }) => {
   ).toBe(true);
 });
 
+test('collapses saved locations on mobile after selecting a location', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockLocationApi(page, [location(1, 'Bishan'), location(2, 'Changi')]);
+  await page.goto('/');
+
+  const toggle = page.getByRole('button', { name: /Saved locations\s+2/i });
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: /Select Bishan/ })).toHaveCount(0);
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: /Select Bishan/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Select Changi/ })).toBeVisible();
+
+  await page.getByRole('button', { name: /Select Changi/ }).click();
+
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Changi' })).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: /Select Bishan/ })).toHaveCount(0);
+});
+
 test('creates a forecast-area location with an optional label from the picker', async ({
   page,
 }) => {
@@ -161,15 +198,19 @@ test('creates a forecast-area location with an optional label from the picker', 
   await page.getByRole('button', { name: 'Add Location' }).click();
 
   await expect(page.getByLabel('Search forecast areas')).toBeVisible();
-  await expect(page.getByRole('option', { name: /Select Bishan/ })).toBeVisible();
-  await expect(page.getByRole('option', { name: /Select Changi/ })).toBeVisible();
+  const forecastAreaSelect = page.getByRole('combobox', { name: /^Forecast area/i });
+  await expect(forecastAreaSelect).toBeVisible();
+  await expect(forecastAreaSelect).toHaveJSProperty('tagName', 'SELECT');
+  await expect(forecastAreaSelect.locator('option')).toHaveCount(3);
+  await expect(forecastAreaSelect.locator('option').nth(0)).toContainText('Bishan');
 
   await page.getByLabel('Search forecast areas').fill('chan');
-  await expect(page.getByRole('option', { name: /Select Changi/ })).toBeVisible();
-  await expect(page.getByRole('option', { name: /Select Bishan/ })).toHaveCount(0);
+  await expect(forecastAreaSelect.locator('option')).toHaveCount(1);
+  await expect(forecastAreaSelect).toHaveValue('Changi');
 
   await page.getByLabel('Search forecast areas').fill('bish');
-  await page.getByRole('option', { name: /Select Bishan/ }).click();
+  await expect(forecastAreaSelect.locator('option')).toHaveCount(1);
+  await forecastAreaSelect.selectOption('Bishan');
   await locationLabelInput(page).fill('Office');
   await page.getByRole('button', { name: /Add selected area|Add forecast area/i }).click();
 
@@ -181,6 +222,8 @@ test('creates a forecast-area location with an optional label from the picker', 
 
 test('keeps manual coordinate mode working', async ({ page }) => {
   const createRequests: CreateLocationPayload[] = [];
+  const longLabel = 'Weather Ops Decision Support Hub 1234567890';
+  const expectedLabel = longLabel.slice(0, 40);
   await mockLocationApi(page, [], {
     create: (payload) => {
       createRequests.push(payload);
@@ -210,12 +253,14 @@ test('keeps manual coordinate mode working', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
   await page.getByLabel('Latitude').fill('1.346');
   await page.getByLabel('Longitude').fill('103.812');
+  const labelInput = locationLabelInput(page);
+  await labelInput.fill(longLabel);
+  await expect(labelInput).toHaveValue(expectedLabel);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
 
-  await expect(
-    page.getByRole('main').getByRole('heading', { name: '1.346, 103.812' }),
-  ).toBeVisible();
-  expect(createRequests).toEqual([{ latitude: 1.346, longitude: 103.812 }]);
+  await expect(page.getByRole('main').getByRole('heading', { name: expectedLabel })).toBeVisible();
+  await expect(page.getByRole('main')).toContainText('1.346, 103.812');
+  expect(createRequests).toEqual([{ latitude: 1.346, longitude: 103.812, label: expectedLabel }]);
 });
 
 test('persists accessible theme selection', async ({ page }) => {
@@ -224,6 +269,20 @@ test('persists accessible theme selection', async ({ page }) => {
   await page.getByLabel('Theme').selectOption('terminal');
 
   await expect(page.locator('body')).toHaveClass(/theme-terminal/);
+});
+
+test('does not overflow horizontally across all themes on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockLocationApi(page, [
+    location(1, 'Bishan', { condition: 'Thundery Showers' }, { label: 'Weather Ops Hub' }),
+  ]);
+  await page.goto('/');
+
+  for (const theme of THEMES) {
+    await page.getByLabel('Theme').selectOption(theme);
+    await expect(page.locator('body')).toHaveClass(new RegExp(`theme-${theme}`));
+    await expectNoHorizontalOverflow(page);
+  }
 });
 
 test('renders selected-location risk and data trust without fake primary labels', async ({
@@ -391,10 +450,15 @@ test('refreshes a selected location and updates Data Trust', async ({ page }) =>
   });
   await page.goto('/');
 
-  await page.getByRole('button', { name: 'Refresh' }).click();
+  const dataTrust = page.locator('section', { hasText: 'Data Trust' });
+  const refreshButton = dataTrust.getByRole('button', { name: 'Refresh' });
+  await expect(refreshButton).toBeVisible();
+  await expect(page.getByRole('main').getByRole('button', { name: 'Refresh' })).toHaveCount(1);
+
+  await refreshButton.click();
 
   await expect(page.getByRole('main').getByText('Fair', { exact: true })).toBeVisible();
-  await expect(page.locator('section', { hasText: 'Data Trust' })).toContainText('Complete');
+  await expect(dataTrust).toContainText('Complete');
 });
 
 test('requires confirmation before deleting a saved location', async ({ page }) => {
@@ -414,16 +478,46 @@ test('requires confirmation before deleting a saved location', async ({ page }) 
 });
 
 test('opens and closes the fullscreen map as a dialog', async ({ page }) => {
-  await mockLocationApi(page, [location(1, 'Bishan')]);
+  await mockLocationApi(page, [location(1, 'Bishan'), location(2, 'Changi')]);
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Expand map' }).click();
-  await expect(page.getByRole('dialog', { name: 'Map Overview' })).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'Map Overview' });
+  await expect(dialog).toBeVisible();
   await expect(page.getByLabel('Saved weather map locations')).toContainText('Bishan');
+  const closeButton = dialog.getByRole('button', { name: 'Close map' });
+  await expect(closeButton).toBeFocused();
+
+  await page.keyboard.press('Shift+Tab');
+  await expect(dialog.getByRole('button', { name: 'Changi' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(closeButton).toBeFocused();
+
+  await dialog.getByRole('button', { name: 'Changi' }).click();
+  await expect(dialog.getByRole('button', { name: 'Changi' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Map Overview' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Expand map' })).toBeFocused();
+});
+
+test('selects locations from map markers and highlights the selected marker', async ({ page }) => {
+  await mockLocationApi(page, [location(1, 'Bishan'), location(2, 'Changi')]);
+  await page.goto('/');
+
+  const mapCard = page.locator('section', { hasText: 'Map Overview' });
+  const markers = page.locator('.weather-pin-icon');
+  await expect(mapCard).toContainText('Selected: Bishan');
+  await expect(markers).toHaveCount(2);
+
+  await markers.nth(1).dispatchEvent('click');
+
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Changi' })).toBeVisible();
+  await expect(mapCard).toContainText('Selected: Changi');
+  await expect(markers.nth(1).locator('div').first()).toHaveClass(/ring-2/);
 });
 
 async function mockLocationApi(
@@ -496,6 +590,16 @@ async function mockLocationApi(
       ];
     }
     await fulfillJson(route, response, response.created ? 201 : 200);
+  });
+
+  await page.route(/\/api\/locations\/\d+\/history(?:\?.*)?$/, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    await fulfillJson(route, {
+      observations: options.history?.(locationId(route.request().url())) ?? [],
+    });
   });
 
   await page.route(/\/api\/locations\/\d+\/refresh$/, async (route) => {
@@ -668,10 +772,14 @@ function dataQuality(
   status: RefreshStatus,
   unavailableSignals: WeatherSignal[] = [],
 ): WeatherSnapshot['data_quality'] {
+  const freshnessStatus =
+    status === 'not_refreshed' ? 'not_refreshed' : status === 'unknown' ? 'unknown' : 'fresh';
   return {
     status,
     last_refreshed_at: status === 'not_refreshed' ? null : new Date().toISOString(),
     unavailable_signals: unavailableSignals,
+    freshness_status: freshnessStatus,
+    stale_signals: [],
   };
 }
 
@@ -728,6 +836,14 @@ async function expectSidebarOrder(page: Page, first: RegExp, second: RegExp) {
   const locationButtons = page.locator('aside').getByRole('button', { name: /^Select / });
   await expect(locationButtons.nth(0)).toHaveAccessibleName(first);
   await expect(locationButtons.nth(1)).toHaveAccessibleName(second);
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const dimensions = await page.evaluate(() => ({
+    innerWidth: window.innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.innerWidth + 1);
 }
 
 function cloneLocation(value: Location): Location {

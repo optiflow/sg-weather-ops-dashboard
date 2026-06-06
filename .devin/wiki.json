@@ -5,7 +5,7 @@
       "author": "Repository maintainer"
     },
     {
-      "content": "DeepWiki should explain the end-to-end weather snapshot workflow: users create, list, select, get, delete, and refresh saved Singapore locations; browser geolocation can create or select the nearest data.gov.sg 2-hour forecast area; the backend aggregates provider data into one snapshot; SQLite persists the latest snapshot; React renders the saved locations, map, forecast, metrics, and themes.",
+      "content": "DeepWiki should explain the end-to-end weather snapshot workflow: users create, list, select, get, delete, and refresh saved Singapore locations; browser geolocation can create or select the nearest data.gov.sg 2-hour forecast area; the backend aggregates provider data into the latest snapshot; SQLite persists the latest snapshot plus append-only refresh attempts and observations; React renders the saved locations, map, forecast, metrics, themes, and lightweight trend history.",
       "author": "Repository maintainer"
     },
     {
@@ -17,7 +17,7 @@
       "author": "Repository maintainer"
     },
     {
-      "content": "For agent and operator workflows, document root npm commands from package.json and docs/COMMANDS.md, the quality gate npm test then npm run build then npm run lint, Portless development through scripts/dev.mjs, the production start path through scripts/start.mjs, and the instruction hierarchy in AGENTS.md and .agents/skills/.",
+      "content": "For agent and operator workflows, document root npm commands from package.json and docs/COMMANDS.md, the quality gate npm test then npm run build then npm run docs:build then npm run docs:check then npm run lint, browser-facing npm run test:e2e, Portless development through scripts/dev.mjs, direct-server diagnostics through scripts/doctor.mjs, the production start path through scripts/start.mjs, and the instruction hierarchy in AGENTS.md, .agents/skills/, and skills-lock.json. Treat skills-lock.json as the installed external-skill lockfile and .agents/skills/ as the repo-local skill directory.",
       "author": "Repository maintainer"
     }
   ],
@@ -37,7 +37,7 @@
       "parent": "Overview",
       "page_notes": [
         "Use package.json and docs/COMMANDS.md as the command sources of truth.",
-        "Mention npm workspaces, Portless local URLs, and running commands from the repository root."
+        "Mention npm workspaces, the Node 24 and npm 11 baseline, Portless local URLs, docs:check, and running commands from the repository root."
       ]
     },
     {
@@ -51,7 +51,7 @@
     },
     {
       "title": "Application Workflows",
-      "purpose": "Describe the user-visible workflows across the full stack: listing locations, manual coordinate creation, browser-position creation, selected-location rendering, refresh, delete, frontend logging, and provider failure handling.",
+      "purpose": "Describe the user-visible workflows across the full stack: listing locations, manual coordinate creation with optional label, browser-position creation, selected-location rendering, refresh, lightweight history, delete, frontend logging, and provider failure handling.",
       "parent": "Overview",
       "page_notes": [
         "Connect frontend actions in frontend/src/state/store.tsx to API calls in frontend/src/api.ts and route handlers in backend/src/routes/locations.ts.",
@@ -69,38 +69,38 @@
     },
     {
       "title": "Express Server and API Surface",
-      "purpose": "Document Express app setup, security headers, JSON limits, health route, frontend log route, API route mounting, Vite middleware in development, static serving in production, and error handling.",
+      "purpose": "Document Express app setup, security headers, JSON limits, health route, readiness route, frontend log route, API route mounting, Vite middleware in development, static serving in production, and error handling.",
       "parent": "Backend",
       "page_notes": [
         "Use backend/src/server.ts and docs/src/content/docs/reference/api-endpoints.md.",
-        "Cover /health, /api/logs, /api route mounting, Vite middleware, static frontend serving, and consistent JSON error shape."
+        "Cover /health, /ready, sanitized /api/logs metadata, /api route mounting, Vite middleware, static frontend serving, and consistent JSON error shape."
       ]
     },
     {
       "title": "Location Lifecycle API",
-      "purpose": "Document the full /api/locations lifecycle: list, create from coordinates, create from browser position, get one, delete, refresh, validation, duplicate behavior, idempotent browser-position behavior, and provider error responses.",
+      "purpose": "Document the full /api/locations lifecycle: list, create from coordinates, create from browser position, get one, history, delete, refresh, validation, duplicate behavior, idempotent browser-position behavior, and provider error responses.",
       "parent": "Backend",
       "page_notes": [
         "Use backend/src/routes/locations.ts, backend/src/routes/locations.test.ts, and docs/src/content/docs/reference/api-endpoints.md.",
-        "Must include GET /api/locations/:locationId and DELETE /api/locations/:locationId, including the 204 No Content delete response."
+        "Must include GET /api/locations/:locationId, GET /api/locations/:locationId/history, and DELETE /api/locations/:locationId, including the 204 No Content delete response."
       ]
     },
     {
       "title": "Weather Data Pipeline",
-      "purpose": "Explain how SingaporeWeatherClient fetches and combines data.gov.sg 2-hour forecasts, station readings, UV, PSI, PM2.5, 24-hour regional forecasts, and 4-day forecasts into one WeatherSnapshot.",
+      "purpose": "Explain how SingaporeWeatherClient fetches and combines data.gov.sg 2-hour forecasts, station readings, UV, separate PSI and PM2.5 reads, 24-hour regional forecasts, and 4-day forecasts into one WeatherSnapshot.",
       "parent": "Backend",
       "page_notes": [
         "Use backend/src/weather.ts, backend/src/weather.test.ts, backend/src/weather-test.ts, docs/src/content/docs/guides/weather-data.md, and .agents/skills/sg-weather-api/SKILL.md.",
-        "Cover nearest forecast-area matching, nearest station matching, region matching, partial failures, timeouts, API key behavior, and WeatherProviderError mapping."
+        "Cover nearest forecast-area matching, nearest station matching, region matching, in-memory cache TTLs, request coalescing, partial failures, timeouts, API key behavior, data_quality freshness fields, and WeatherProviderError mapping."
       ]
     },
     {
       "title": "SQLite Persistence and Drizzle Schema",
-      "purpose": "Document SQLite persistence, Drizzle schema and migrations, database helper functions, default weather snapshots, unique coordinate behavior, JSON text columns, and row-to-API mapping.",
+      "purpose": "Document SQLite persistence, Drizzle schema and migrations, database helper functions, default weather snapshots, unique coordinate behavior, JSON text columns, refresh attempts, weather observations, and row-to-API mapping.",
       "parent": "Backend",
       "page_notes": [
         "Use backend/src/schema.ts, backend/src/db.ts, backend/drizzle/, docs/src/content/docs/reference/database-schema.md, and backend persistence tests.",
-        "Do not use backend/weather.db as the source of truth; it is local runtime state."
+        "Do not use backend/weather.db as the source of truth; it is local runtime state. Do not imply historical observations are backfilled from existing locations."
       ]
     },
     {
@@ -114,7 +114,7 @@
     },
     {
       "title": "Dashboard State and API Client",
-      "purpose": "Document React Context state management, selected-location behavior, loading and error state, create/createFromPosition/refresh/remove actions, frontend logging calls, and the fetch wrapper contracts.",
+      "purpose": "Document React Context state management, selected-location behavior, loading and error state, create/createFromPosition/refresh/remove actions, history fetching, frontend logging calls, and the fetch wrapper contracts.",
       "parent": "Frontend",
       "page_notes": [
         "Use frontend/src/state/store.tsx, frontend/src/api.ts, frontend/src/types.ts, and backend API reference docs.",
@@ -123,16 +123,16 @@
     },
     {
       "title": "Dashboard Components and Weather Rendering",
-      "purpose": "Document the React component tree and how the dashboard renders saved locations, selected-location hero data, hourly forecast periods, daily forecasts, and metric tiles.",
+      "purpose": "Document the React component tree and how the dashboard renders saved locations, selected-location hero data, data trust refresh, trend panel history, hourly forecast periods, daily forecasts, shared weather icons, and metric tiles.",
       "parent": "Frontend",
       "page_notes": [
         "Use frontend/src/App.tsx, frontend/src/components/, frontend/src/components/format.ts, frontend/src/types.ts, and docs/src/content/docs/reference/frontend-components.md.",
-        "Cover Sidebar, AddLocationForm, SidebarCard, Hero, HourlyStrip, TenDayForecast, TileGrid, and unavailable-value display behavior."
+        "Cover Sidebar, AddLocationForm, SidebarCard, Hero, DataTrustStrip, TrendPanel, HourlyStrip, TenDayForecast, TileGrid, and unavailable-value display behavior."
       ]
     },
     {
       "title": "Map, Geolocation, and Forecast-Area Matching",
-      "purpose": "Document the Leaflet map, fullscreen map behavior, browser geolocation wrapper, trusted-origin checks, Use my location flow, backend validation, and canonical nearest 2-hour forecast-area storage.",
+      "purpose": "Document the Leaflet map, selectable markers, selected-marker highlight, fullscreen focus trap, browser geolocation wrapper, trusted-origin checks, Use my location flow, backend validation, and canonical nearest 2-hour forecast-area storage.",
       "parent": "Frontend",
       "page_notes": [
         "Use frontend/src/components/MapCard.tsx, frontend/src/components/UseMyLocationButton.tsx, frontend/src/geolocation.ts, frontend/src/state/store.tsx, backend/src/routes/locations.ts, and backend/src/weather.ts.",
@@ -168,7 +168,7 @@
     },
     {
       "title": "Runtime Configuration and Local Scripts",
-      "purpose": "Document environment variables, dev/start/reset/doctor scripts, Portless defaults, production serving path, SQLite database path behavior, and weather API key usage.",
+      "purpose": "Document environment variables, dev/start/reset/doctor scripts, Portless defaults, direct-server doctor fallback, production serving path, SQLite database path behavior, and weather API key usage.",
       "parent": "Documentation and Operations",
       "page_notes": [
         "Use scripts/dev.mjs, scripts/start.mjs, scripts/reset.mjs, scripts/doctor.mjs, .env.example, frontend/.env.local.example, docs/src/content/docs/reference/configuration.md, and package.json.",
@@ -177,10 +177,10 @@
     },
     {
       "title": "Agent Workflow and Quality",
-      "purpose": "Document repository instructions for agents, local skills, code-review role, quality gates, permissions, and workflow expectations.",
+      "purpose": "Document repository instructions for agents, local skills, skills-lock install metadata, code-review role, quality gates, permissions, and workflow expectations.",
       "parent": null,
       "page_notes": [
-        "Use AGENTS.md, .agents/skills/, .agents/code-review/agent.md, skills-lock.json, and llms.txt.",
+        "Use AGENTS.md, .agents/skills/, .agents/code-review/agent.md, skills-lock.json, and llms.txt. Clarify that .agents/skills/ contains the executable project skill instructions while skills-lock.json records installed skill metadata.",
         "Explain when to use repo-quality-gate, weather-feature-workflow, drizzle-sqlite-migration, frontend-visual-qa, sg-weather-api, and chrome-devtools."
       ]
     },
@@ -190,12 +190,12 @@
       "parent": "Agent Workflow and Quality",
       "page_notes": [
         "Use vitest.config.ts, biome.json, backend/src/*.test.ts, docs/COMMANDS.md, docs/TYPESCRIPT.md, AGENTS.md, and .agents/skills/repo-quality-gate/SKILL.md.",
-        "Include the quality gate order: npm test, npm run build, npm run lint."
+        "Include the quality gate order: npm test, npm run build, npm run docs:build, npm run docs:check, npm run lint. Mention npm run test:e2e for browser-facing changes."
       ]
     },
     {
       "title": "Glossary",
-      "purpose": "Define project-specific terms and concepts used across the wiki, including WeatherSnapshot, location, matched_area, forecast area, station reading, region reading, Portless, Drizzle migration, Starlight docs, and local agent skills.",
+      "purpose": "Define project-specific terms and concepts used across the wiki, including WeatherSnapshot, data_quality, refresh attempt, weather observation, location, matched_area, forecast area, station reading, region reading, Portless, Drizzle migration, Starlight docs, and local agent skills.",
       "parent": null,
       "page_notes": [
         "Use README.md, docs/src/content/docs/reference/api-endpoints.md, docs/src/content/docs/reference/database-schema.md, docs/src/content/docs/guides/weather-data.md, and source type definitions.",

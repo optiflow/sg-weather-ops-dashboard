@@ -2,7 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/optiflow/sg-weather-ops-dashboard)
 
-SG Weather Ops Dashboard is an AI-assisted full-stack deployment case study for saving Singapore locations and viewing the latest local weather snapshot for each one. It is built as an npm workspaces monorepo with a React/Vite dashboard, an Express API, SQLite persistence through Drizzle ORM, and Singapore data.gov.sg weather endpoints.
+SG Weather Ops Dashboard is an AI-assisted full-stack deployment case study for saving Singapore locations, viewing the latest local weather snapshot for each one, and keeping an append-only observation trail for refreshed weather. It is built as an npm workspaces monorepo with a React/Vite dashboard, an Express API, SQLite persistence through Drizzle ORM, and Singapore data.gov.sg weather endpoints.
 
 The project is small enough to study end to end. It still covers practical delivery surfaces: forecast-area location creation, browser geolocation, saved-location labeling and favorites, API validation, external data aggregation, SQLite persistence, refresh behavior, frontend state, responsive UI, local docs, automated tests, and a repeatable quality gate.
 
@@ -19,6 +19,8 @@ Install dependencies from the repository root:
 ```bash
 npm install
 ```
+
+The repository targets Node.js 24 and npm 11. Use `.nvmrc` or another version manager to select the Node baseline before installing dependencies.
 
 Start the app:
 
@@ -46,6 +48,7 @@ Before finishing changes, run the root quality gate:
 npm test
 npm run build
 npm run docs:build
+npm run docs:check
 npm run lint
 ```
 
@@ -55,8 +58,8 @@ npm run lint
 - Keeps manual coordinate entry as a secondary mode for explicit latitude/longitude testing.
 - Adds the nearest Singapore 2-hour forecast area from browser geolocation with **Use my location**.
 - Lists, searches, sorts, labels, favorites, selects, refreshes, and deletes saved locations.
-- Stores one latest weather snapshot per location in `backend/weather.db`.
-- Shows 2-hour forecast text, realtime temperature, humidity, rainfall, wind, UV, air quality, 24-hour forecast periods, and a 4-day outlook.
+- Stores one latest weather snapshot per location in `backend/weather.db`, with refreshed observations retained separately for lightweight history.
+- Shows 2-hour forecast text, realtime temperature, humidity, rainfall, wind, UV, PSI, PM2.5, 24-hour forecast periods, and a 4-day outlook.
 - Renders a responsive React dashboard with a sidebar, selected-location hero, Weather Risk Brief, Data Trust strip, weather metric tiles, theme switching, and a Leaflet map.
 - Keeps detailed architecture, API, schema, component, and configuration docs in the `docs/` workspace.
 
@@ -85,7 +88,7 @@ flowchart LR
 
 In development, `scripts/dev.mjs` starts the backend with Vite loaded as middleware, so the browser can use relative `/api` requests without a separate frontend proxy. In production, the compiled backend serves `frontend/dist` as static files.
 
-The app uses a snapshot model: saved locations keep the latest persisted weather data, and refresh actions fetch a new snapshot from data.gov.sg.
+The app still uses the latest snapshot as the primary dashboard read model: saved locations keep the latest persisted weather data, and refresh actions fetch a new snapshot from data.gov.sg. Refreshes also record append-only attempts and weather observations for the history endpoint.
 
 ## Common Commands
 
@@ -96,6 +99,7 @@ Run commands from the repository root.
 | `npm run dev` | Start the full app through Portless. |
 | `npm run docs` | Start the Astro Starlight docs site. |
 | `npm run docs:build` | Build the Astro Starlight docs site. |
+| `npm run docs:check` | Check local Markdown/MDX links and DeepWiki steering JSON. |
 | `npm test` | Run Vitest and Supertest backend tests. |
 | `npm run test:e2e` | Run the Playwright smoke test. |
 | `npm run test:watch` | Run tests in watch mode. |
@@ -115,12 +119,14 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) and [configuration reference](docs/src/
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Health check. |
+| `GET` | `/ready` | Database and migration readiness check that does not call data.gov.sg. |
 | `GET` | `/api/forecast-areas` | List sorted canonical Singapore forecast areas. |
 | `GET` | `/api/locations` | List saved locations. |
 | `POST` | `/api/locations` | Create a location from explicit coordinates. |
 | `POST` | `/api/locations/from-area` | Create or select a canonical forecast-area location. |
 | `POST` | `/api/locations/from-position` | Add or select the nearest forecast area from browser coordinates. |
 | `GET` | `/api/locations/:id` | Get one saved location. |
+| `GET` | `/api/locations/:id/history` | List recent persisted weather observations for one location. |
 | `PATCH` | `/api/locations/:id` | Update saved-location label and favorite state. |
 | `DELETE` | `/api/locations/:id` | Delete a saved location. |
 | `POST` | `/api/locations/:id/refresh` | Refresh weather for a saved location. |
@@ -163,9 +169,8 @@ export WEATHER_API_KEY=your_api_key_here
 npm run dev
 ```
 
-The weather client aggregates 2-hour forecast data, realtime station readings, UV, air quality, 24-hour forecast periods, and the 4-day outlook. Each snapshot includes `weather.data_quality` so the UI can distinguish unrefreshed, complete, partial, and unavailable refresh results. Provider details live in [Weather Data](docs/src/content/docs/guides/weather-data.md).
+The weather client aggregates 2-hour forecast data, realtime station readings, UV, PSI, PM2.5, 24-hour forecast periods, and the 4-day outlook. Each snapshot includes `weather.data_quality` so the UI can distinguish refresh coverage and freshness, including unrefreshed, complete, partial, unavailable, fresh, and stale states. Provider details live in [Weather Data](docs/src/content/docs/guides/weather-data.md).
 
 ## Future Ideas
 
-- Stronger mobile controls for saved-location management.
-- Historical readings and trend charts are intentionally deferred until the Weather Risk Brief proves useful, because they require a new persistence model instead of the current one-snapshot-per-location table.
+- Richer charting on top of the current observation-history endpoint, without adding a charting dependency until the trend view needs it.

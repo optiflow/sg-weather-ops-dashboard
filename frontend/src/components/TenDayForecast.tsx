@@ -1,5 +1,6 @@
 import type { DailyForecast, WeatherSnapshot } from '../types';
-import { CalendarIcon, CloudIcon } from './icons';
+import { WeatherConditionIcon } from '../weatherIcon';
+import { CalendarIcon } from './icons';
 
 interface TenDayForecastProps {
   weather: WeatherSnapshot;
@@ -66,7 +67,7 @@ export function TenDayForecast({ weather }: TenDayForecastProps) {
                 className="grid grid-cols-[4rem_1.5rem_2.5rem_1fr_2.5rem] items-center gap-2 px-3 py-3 text-sm sm:grid-cols-[5rem_2rem_3rem_1fr_3rem] sm:gap-3 sm:px-4"
               >
                 <span className="font-medium text-white/95">{labelForDate(day.date, index)}</span>
-                <CloudIcon className="h-5 w-5 text-white/80" />
+                <WeatherConditionIcon condition={day.forecast} className="h-5 w-5 text-white/80" />
                 <span className="tabular-nums text-white/60">
                   {formatTemperature(day.temperature_low_c)}
                 </span>

@@ -9,6 +9,7 @@ import { createLocationsRouter, type WeatherClient } from './routes/locations.js
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;
 const FRONTEND_EVENT_PATTERN = /^[a-z][a-z0-9_.:-]{1,63}$/;
+const FRONTEND_METADATA_KEYS = new Set(['locationId', 'area', 'created', 'hasLabel', 'isFavorite']);
 
 interface AppOptions {
   serveFrontend?: boolean;
@@ -22,7 +23,25 @@ export async function createApp(options: AppOptions = {}) {
   const enableRequestLogging = options.enableRequestLogging ?? process.env.NODE_ENV !== 'test';
 
   if (enableRequestLogging) {
-    app.use(pinoHttp({ logger }));
+    app.use(
+      pinoHttp({
+        logger,
+        serializers: {
+          req(request) {
+            return {
+              id: request.id,
+              method: request.method,
+              url: request.url?.split('?')[0],
+            };
+          },
+          res(response) {
+            return {
+              statusCode: response.statusCode,
+            };
+          },
+        },
+      }),
+    );
   }
 
   // Security enhancements: add basic headers natively
@@ -47,19 +66,42 @@ export async function createApp(options: AppOptions = {}) {
     response.json({ status: 'healthy' });
   });
 
+  app.get('/ready', async (_request, response) => {
+    try {
+      const { listLocations } = await import('./db.js');
+      await listLocations();
+      response.json({
+        status: 'ready',
+        checks: {
+          database: 'ready',
+          migrations: 'ready',
+          weather_provider: 'not_checked',
+        },
+      });
+    } catch {
+      response.status(503).json({
+        status: 'not_ready',
+        checks: {
+          database: 'not_ready',
+          migrations: 'unknown',
+          weather_provider: 'not_checked',
+        },
+      });
+    }
+  });
+
   app.post('/api/logs', (request, response) => {
-    const event = request.body?.event;
-    const metadata = request.body?.metadata;
-    if (typeof event !== 'string' || !FRONTEND_EVENT_PATTERN.test(event)) {
+    const payload = sanitizeFrontendLogPayload(request.body);
+    if (!payload) {
       response.status(422).json({ detail: 'event is required' });
       return;
     }
     logger.info(
       {
         source: 'frontend',
-        event,
-        metadata: metadata && typeof metadata === 'object' ? metadata : undefined,
-        page: typeof request.body?.page === 'string' ? request.body.page : undefined,
+        event: payload.event,
+        metadata: payload.metadata,
+        page: payload.page,
       },
       'frontend interaction',
     );
@@ -99,6 +141,29 @@ export async function createApp(options: AppOptions = {}) {
   );
 
   return app;
+}
+
+export function sanitizeFrontendLogPayload(body: unknown): {
+  event: string;
+  metadata: Record<string, boolean | number | string>;
+  page?: string;
+} | null {
+  const event = (body as { event?: unknown } | undefined)?.event;
+  if (typeof event !== 'string' || !FRONTEND_EVENT_PATTERN.test(event)) return null;
+
+  const rawMetadata = (body as { metadata?: unknown } | undefined)?.metadata;
+  const metadata: Record<string, boolean | number | string> = {};
+  if (rawMetadata && typeof rawMetadata === 'object' && !Array.isArray(rawMetadata)) {
+    for (const [key, value] of Object.entries(rawMetadata)) {
+      if (!FRONTEND_METADATA_KEYS.has(key)) continue;
+      if (typeof value === 'boolean' || typeof value === 'number') metadata[key] = value;
+      if (typeof value === 'string' && key === 'area') metadata[key] = value.slice(0, 80);
+    }
+  }
+
+  const rawPage = (body as { page?: unknown } | undefined)?.page;
+  const page = typeof rawPage === 'string' ? rawPage.split(/[?#]/)[0] : undefined;
+  return { event, metadata, page };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -27,6 +27,27 @@ Returns server health status. Not prefixed with `/api`.
 
 ---
 
+### `GET /ready`
+
+Returns database and migration readiness without calling data.gov.sg. Use this for local diagnostics or deployment probes that need to distinguish process health from persistence readiness.
+
+**Response** `200 OK`
+
+```json
+{
+  "status": "ready",
+  "checks": {
+    "database": "ready",
+    "migrations": "ready",
+    "weather_provider": "not_checked"
+  }
+}
+```
+
+If database initialization or migration access fails, the route returns `503 Service Unavailable` with `status: "not_ready"`.
+
+---
+
 ## Locations
 
 ### `GET /api/forecast-areas`
@@ -68,7 +89,9 @@ List saved locations. The default API order is recent first, with favorites befo
         "data_quality": {
           "status": "complete",
           "last_refreshed_at": "2026-05-04T12:00:02.000Z",
-          "unavailable_signals": []
+          "unavailable_signals": [],
+          "freshness_status": "fresh",
+          "stale_signals": []
         }
       }
     }
@@ -131,8 +154,10 @@ Create a new location from explicit coordinates. This manual coordinate endpoint
 **Request Body**
 
 ```json
-{ "latitude": 1.35, "longitude": 103.85 }
+{ "latitude": 1.35, "longitude": 103.85, "label": "Office" }
 ```
+
+`label` is optional and follows the same trim, clear, and 40-character validation contract as forecast-area creates and metadata updates.
 
 **Validation**
 
@@ -140,6 +165,8 @@ Create a new location from explicit coordinates. This manual coordinate endpoint
 | --- | --- |
 | Missing lat/lon, non-number values, or numeric strings | `422` `{ "detail": "latitude and longitude are required" }` |
 | Outside Singapore (lat 1.1–1.5, lon 103.6–104.1) | `422` `{ "detail": "Coordinates must be within Singapore..." }` |
+| `label` is present and not a string or `null` | `422` `{ "detail": "label must be a string or null" }` |
+| `label` exceeds 40 characters after trimming | `422` `{ "detail": "label must be 40 characters or fewer" }` |
 | Duplicate coordinates | `409` `{ "detail": "Location already exists" }` |
 
 **Response** `201 Created`
@@ -197,6 +224,49 @@ Get a single location by ID.
 **Response** `200 OK`
 
 Returns a single `Location` object.
+
+**Error** `404 Not Found`
+
+```json
+{ "detail": "Location not found" }
+```
+
+---
+
+### `GET /api/locations/:locationId/history`
+
+List recent persisted weather observations for one saved location. This endpoint is additive; it does not change the existing `/api/locations*` location response shape. History begins when refresh attempts are recorded and is not backfilled from older `locations` rows.
+
+`limit` is optional, defaults to `24`, and is bounded to `1` through `168`.
+
+**Response** `200 OK`
+
+```json
+{
+  "observations": [
+    {
+      "id": 12,
+      "location_id": 1,
+      "refresh_attempt_id": 20,
+      "captured_at": "2026-05-04T12:00:02.000Z",
+      "observed_at": "2026-05-04T11:55:00.000Z",
+      "weather": {
+        "condition": "Cloudy",
+        "area": "Bishan",
+        "data_quality": {
+          "status": "complete",
+          "last_refreshed_at": "2026-05-04T12:00:02.000Z",
+          "unavailable_signals": [],
+          "freshness_status": "fresh",
+          "stale_signals": []
+        }
+      }
+    }
+  ]
+}
+```
+
+Each `weather` object has the same `WeatherSnapshot` shape as a saved location's latest snapshot.
 
 **Error** `404 Not Found`
 
@@ -291,8 +361,10 @@ Log a frontend interaction event through Pino. The UI fires this for area create
 **Validation**
 
 - `event` must be a string matching `/^[a-z][a-z0-9_.:-]{1,63}$/`
-- `metadata` is included only when it is an object.
-- `page` is included only when it is a string.
+- `metadata` is allowlisted to `locationId`, `area`, `created`, `hasLabel`, and `isFavorite`.
+- Metadata values are retained only as booleans or numbers, except `area`, which may be a string capped at 80 characters.
+- Coordinates, secrets, raw errors, unrecognized metadata keys, and request query/hash content are not retained.
+- `page` is retained only as a path before `?` or `#`.
 
 **Response** `204 No Content` or `422 Unprocessable Entity`
 
@@ -334,6 +406,8 @@ type RefreshStatus =
   | 'partial'
   | 'unavailable';
 
+type FreshnessStatus = 'unknown' | 'not_refreshed' | 'fresh' | 'stale';
+
 type WeatherSignal =
   | 'two_hour_forecast'
   | 'air_temperature'
@@ -351,6 +425,8 @@ interface WeatherDataQuality {
   status: RefreshStatus;
   last_refreshed_at: string | null;
   unavailable_signals: WeatherSignal[];
+  freshness_status: FreshnessStatus;
+  stale_signals: WeatherSignal[];
 }
 
 interface WeatherSnapshot {
@@ -381,6 +457,23 @@ interface WeatherSnapshot {
 }
 ```
 
+### `WeatherObservation`
+
+```ts
+interface WeatherObservation {
+  id: number;
+  location_id: number;
+  refresh_attempt_id: number;
+  captured_at: string;
+  observed_at: string | null;
+  weather: WeatherSnapshot;
+}
+
+interface LocationHistoryResponse {
+  observations: WeatherObservation[];
+}
+```
+
 `weather.data_quality.status` uses these meanings:
 
 | Status | Meaning |
@@ -390,6 +483,8 @@ interface WeatherSnapshot {
 | `complete` | Latest refresh populated every tracked provider signal. |
 | `partial` | Latest refresh populated at least one signal and missed at least one signal. |
 | `unavailable` | Latest refresh did not produce any usable tracked signal. |
+
+`weather.data_quality.freshness_status` is additive. `fresh` means tracked provider timestamps are within the client's freshness windows, while `stale` means at least one usable signal was older than its freshness window and appears in `stale_signals`.
 
 ## Error Format
 

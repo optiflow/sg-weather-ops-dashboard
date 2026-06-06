@@ -2,9 +2,11 @@ import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { renderToString } from 'react-dom/server';
 import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
+import { coordinatesText, locationTitle } from '../locationDisplay';
 import { useStore } from '../state/store';
 import type { Location } from '../types';
-import { CloseIcon, CloudIcon, LocationIcon, SunIcon } from './icons';
+import { WeatherConditionIcon } from '../weatherIcon';
+import { CloseIcon, LocationIcon } from './icons';
 
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -12,12 +14,6 @@ function isFiniteNumber(value: number | null | undefined): value is number {
 
 function formatTemperature(value: number | null | undefined): string {
   return isFiniteNumber(value) ? Math.round(value).toString() : '--';
-}
-
-function getWeatherIcon(condition: string | null) {
-  const isSunny =
-    condition?.toLowerCase().includes('fair') || condition?.toLowerCase().includes('sunny');
-  return isSunny ? <SunIcon className="h-3.5 w-3.5" /> : <CloudIcon className="h-3.5 w-3.5" />;
 }
 
 function MapBoundsUpdater({ locations }: { locations: Location[] }) {
@@ -33,10 +29,11 @@ function MapBoundsUpdater({ locations }: { locations: Location[] }) {
 }
 
 export function MapCard() {
-  const { locations } = useStore();
+  const { locations, selectedId, select } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const expandButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const trayRef = useRef<HTMLDivElement>(null);
 
   const closeFullscreen = useCallback(() => {
     setIsFullscreen(false);
@@ -46,15 +43,36 @@ export function MapCard() {
   useEffect(() => {
     if (!isFullscreen) return;
     closeButtonRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeFullscreen();
+      if (event.key !== 'Tab') return;
+      const focusable = [
+        closeButtonRef.current,
+        ...Array.from(trayRef.current?.querySelectorAll('button') ?? []),
+      ].filter((element): element is HTMLButtonElement => Boolean(element));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
   }, [closeFullscreen, isFullscreen]);
 
   const center: [number, number] =
     locations.length > 0 ? [locations[0].latitude, locations[0].longitude] : [1.3521, 103.8198];
+  const selectedLocation = locations.find((location) => location.id === selectedId);
 
   const mapContent = (
     <>
@@ -64,9 +82,16 @@ export function MapCard() {
       />
       {locations.map((loc) => {
         const temp = formatTemperature(loc.weather?.temperature_c);
+        const isSelected = selectedId === loc.id;
         const iconHtml = renderToString(
-          <div className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur-md border border-white/20 whitespace-nowrap">
-            {getWeatherIcon(loc.weather?.condition)}
+          <div
+            className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur-md border whitespace-nowrap ${
+              isSelected
+                ? 'border-emerald-100/70 bg-emerald-400/35 ring-2 ring-emerald-200/70'
+                : 'border-white/20 bg-white/20'
+            }`}
+          >
+            <WeatherConditionIcon condition={loc.weather?.condition} className="h-3.5 w-3.5" />
             <span>{temp}&deg;</span>
           </div>,
         );
@@ -78,7 +103,14 @@ export function MapCard() {
           iconAnchor: [30, 15],
         });
 
-        return <Marker key={loc.id} position={[loc.latitude, loc.longitude]} icon={customIcon} />;
+        return (
+          <Marker
+            key={loc.id}
+            position={[loc.latitude, loc.longitude]}
+            icon={customIcon}
+            eventHandlers={{ click: () => select(loc.id) }}
+          />
+        );
       })}
       <MapBoundsUpdater locations={locations} />
     </>
@@ -110,7 +142,7 @@ export function MapCard() {
             <CloseIcon className="h-5 w-5" />
           </button>
         </header>
-        <div className="flex-1 h-full w-full">
+        <div className="relative h-full w-full flex-1">
           <MapContainer
             center={center}
             zoom={11}
@@ -120,13 +152,36 @@ export function MapCard() {
             {mapContent}
           </MapContainer>
           <ul className="sr-only" aria-label="Saved weather map locations">
-            {locations.map((location) => {
-              const label =
-                location.weather.area ||
-                `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
-              return <li key={location.id}>{label}</li>;
-            })}
+            {locations.map((location) => (
+              <li key={location.id}>{locationTitle(location)}</li>
+            ))}
           </ul>
+          {locations.length > 0 && (
+            <div
+              ref={trayRef}
+              className="absolute bottom-0 z-[1000] flex w-full gap-2 overflow-x-auto bg-gradient-to-t from-black/85 to-transparent p-4"
+            >
+              {locations.map((location) => {
+                const title = locationTitle(location);
+                const isSelected = selectedId === location.id;
+                return (
+                  <button
+                    key={location.id}
+                    type="button"
+                    onClick={() => select(location.id)}
+                    aria-pressed={isSelected}
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                      isSelected
+                        ? 'border-emerald-100/70 bg-emerald-300/25 text-emerald-50'
+                        : 'border-white/15 bg-white/10 text-white/75 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    {title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -150,7 +205,7 @@ export function MapCard() {
         </button>
       </header>
 
-      <div className="relative h-48 w-full rounded-xl overflow-hidden shadow-inner border border-white/10 pointer-events-none">
+      <div className="relative h-48 w-full overflow-hidden rounded-xl border border-white/10 shadow-inner">
         <MapContainer
           center={center}
           zoom={10}
@@ -164,6 +219,12 @@ export function MapCard() {
         </MapContainer>
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
       </div>
+      {locations.length > 0 && (
+        <p className="text-xs text-white/55">
+          Selected:{' '}
+          {selectedLocation ? locationTitle(selectedLocation) : coordinatesText(locations[0])}
+        </p>
+      )}
     </section>
   );
 }

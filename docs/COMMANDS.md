@@ -9,6 +9,7 @@ Run all commands from the **root directory**.
 - `npm run start`: Starts the production server.
 - `npm run docs`: Starts the Astro Starlight documentation site at `http://localhost:4321`.
 - `npm run docs:build`: Builds the Astro Starlight documentation site.
+- `npm run docs:check`: Checks local Markdown/MDX links and validates `.devin/wiki.json` shape.
 
 ## Testing & Quality
 
@@ -26,6 +27,7 @@ Before finishing code or documentation changes, run the core project quality gat
 npm test
 npm run build
 npm run docs:build
+npm run docs:check
 npm run lint
 ```
 
@@ -50,4 +52,5 @@ In sandboxed agent environments, `npm test` and `npm run test:e2e` may need perm
 
 ## Troubleshooting
 
-- `npm run reset` / `npm run doctor`: Cleans or troubleshoots local state.
+- `npm run reset`: Cleans local state such as the SQLite database.
+- `npm run doctor`: Checks `/health` and `/api/locations` against `SG_WEATHER_OPS_URL` when set; otherwise it tries the Portless URL (`http://sg-weather-ops-dashboard.localhost:1355` by default) and then the direct Express URL (`http://127.0.0.1:3000` by default).

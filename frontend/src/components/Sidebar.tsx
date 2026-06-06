@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { coordinatesText, locationTitle } from '../locationDisplay';
 import { useStore } from '../state/store';
 import type { Location } from '../types';
 import { AddLocationForm } from './AddLocationForm';
@@ -13,14 +14,6 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Weather data could not be updated.';
 }
 
-function coordinatesText(location: Location): string {
-  return `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
-}
-
-function displayTitle(location: Location): string {
-  return location.label?.trim() || location.weather.area || coordinatesText(location);
-}
-
 function createdAtTimestamp(location: Location): number {
   const timestamp = Date.parse(location.created_at);
   return Number.isFinite(timestamp) ? timestamp : 0;
@@ -31,7 +24,7 @@ function compareFavorites(a: Location, b: Location): number {
 }
 
 function compareByName(a: Location, b: Location): number {
-  const titleCompare = displayTitle(a).localeCompare(displayTitle(b), undefined, {
+  const titleCompare = locationTitle(a).localeCompare(locationTitle(b), undefined, {
     sensitivity: 'base',
   });
   return titleCompare || createdAtTimestamp(b) - createdAtTimestamp(a) || b.id - a.id;
@@ -59,6 +52,7 @@ export function Sidebar() {
   const { locations, isLoading, error } = useStore();
   const [query, setQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('recent');
+  const [isMobileListOpen, setIsMobileListOpen] = useState(false);
   const message = errorMessage(error);
 
   const filtered = useMemo(() => {
@@ -84,7 +78,10 @@ export function Sidebar() {
           id="location-search"
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (e.target.value.trim()) setIsMobileListOpen(true);
+          }}
           placeholder="Search saved locations"
           className="w-full rounded-lg border border-white/10 bg-white/[0.08] py-2 pl-9 pr-3 text-sm text-white placeholder:text-white/50"
         />
@@ -125,7 +122,21 @@ export function Sidebar() {
         </p>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+      <button
+        type="button"
+        onClick={() => setIsMobileListOpen((current) => !current)}
+        aria-expanded={isMobileListOpen}
+        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-white/75 md:hidden"
+      >
+        <span>Saved locations</span>
+        <span>{filtered.length}</span>
+      </button>
+
+      <div
+        className={`min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1 md:flex ${
+          isMobileListOpen || locations.length === 0 ? 'flex' : 'hidden'
+        }`}
+      >
         {isLoading && locations.length === 0 ? (
           <p className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 text-sm text-white/70">
             Loading locations…
@@ -139,7 +150,13 @@ export function Sidebar() {
             No locations yet. Add one above.
           </p>
         ) : (
-          filtered.map((location) => <SidebarCard key={location.id} location={location} />)
+          filtered.map((location) => (
+            <SidebarCard
+              key={location.id}
+              location={location}
+              onSelected={() => setIsMobileListOpen(false)}
+            />
+          ))
         )}
       </div>
     </aside>

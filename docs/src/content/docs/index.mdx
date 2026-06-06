@@ -21,12 +21,12 @@ import { LinkCard } from '@astrojs/starlight/components';
 
 ## What is SG Weather Ops Dashboard?
 
-SG Weather Ops Dashboard is an AI-assisted full-stack TypeScript deployment case study for saving Singapore locations and viewing the latest weather snapshot for each saved place. The dashboard combines a React/Vite interface, an Express API, SQLite persistence through Drizzle ORM, Singapore data.gov.sg weather endpoints, docs, tests, and local verification workflows.
+SG Weather Ops Dashboard is an AI-assisted full-stack TypeScript deployment case study for saving Singapore locations, viewing the latest weather snapshot for each saved place, and retaining refreshed observation history. The dashboard combines a React/Vite interface, an Express API, SQLite persistence through Drizzle ORM, Singapore data.gov.sg weather endpoints, docs, tests, and local verification workflows.
 
 <div class="landing-signal">
   <div class="landing-signal__item">
     <p class="landing-signal__label">Weather model</p>
-    <p class="landing-signal__value">One latest snapshot per saved location</p>
+    <p class="landing-signal__value">Latest snapshot plus refreshed observations</p>
   </div>
   <div class="landing-signal__item">
     <p class="landing-signal__label">Location workflows</p>
@@ -50,8 +50,8 @@ SG Weather Ops Dashboard is an AI-assisted full-stack TypeScript deployment case
     <span>Location routes validate input, refresh weather, and expose JSON responses.</span>
   </div>
   <div class="landing-flow-summary__step">
-    <strong>SQLite snapshot</strong>
-    <span>Drizzle stores saved coordinates and the latest weather fields.</span>
+    <strong>SQLite persistence</strong>
+    <span>Drizzle stores saved coordinates, the latest weather fields, and refresh history.</span>
   </div>
   <div class="landing-flow-summary__step">
     <strong>data.gov.sg</strong>
@@ -82,7 +82,7 @@ The development runtime serves the dashboard and API from one Portless URL, so b
   <LinkCard
     title="Understand weather data"
     href="/sg-weather-ops-dashboard/guides/weather-data/"
-    description="Trace data.gov.sg provider calls into forecast periods, metrics, and stored snapshots."
+    description="Trace data.gov.sg provider calls into forecast periods, metrics, data quality, and stored observations."
   />
   <LinkCard
     title="Inspect implementation"
@@ -100,11 +100,11 @@ The development runtime serves the dashboard and API from one Portless URL, so b
   </section>
   <section class="landing-implementation__panel">
     <h3>Weather data</h3>
-    <p><code>backend/src/weather.ts</code> maps data.gov.sg responses into the snapshot rendered by the dashboard. See <a href="/sg-weather-ops-dashboard/guides/weather-data/">Weather Data Pipeline</a>.</p>
+    <p><code>backend/src/weather.ts</code> maps data.gov.sg responses into the snapshot rendered by the dashboard and classifies data quality. See <a href="/sg-weather-ops-dashboard/guides/weather-data/">Weather Data Pipeline</a>.</p>
   </section>
   <section class="landing-implementation__panel">
     <h3>Persistence</h3>
-    <p><code>backend/src/db.ts</code> and <code>backend/src/schema.ts</code> manage Drizzle, migrations, and snapshot columns. See <a href="/sg-weather-ops-dashboard/reference/database-schema/">Database Schema</a>.</p>
+    <p><code>backend/src/db.ts</code> and <code>backend/src/schema.ts</code> manage Drizzle, migrations, latest snapshot columns, refresh attempts, and observation history. See <a href="/sg-weather-ops-dashboard/reference/database-schema/">Database Schema</a>.</p>
   </section>
   <section class="landing-implementation__panel">
     <h3>Dashboard UI</h3>

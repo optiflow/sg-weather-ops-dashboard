@@ -29,6 +29,15 @@ export function SunIcon({ className = 'h-5 w-5', ...props }: IconProps) {
   );
 }
 
+export function ThunderIcon({ className = 'h-5 w-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base} {...props}>
+      <path d="M7 15h9a3.5 3.5 0 0 0 .7-6.9A5.2 5.2 0 0 0 6.3 9.3 3 3 0 0 0 7 15Z" />
+      <path d="m12 14-2 4h3l-1 4 4-6h-3l1-2Z" />
+    </svg>
+  );
+}
+
 export function HomeIcon({ className = 'h-3 w-3', ...props }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} {...base} {...props}>

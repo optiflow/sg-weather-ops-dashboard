@@ -7,8 +7,8 @@ SG Weather Ops Dashboard is an npm workspaces monorepo with three workspaces: `f
 
 ## Prerequisites
 
-- Node.js v22 or later. The backend uses the built-in `node:sqlite` module through `DatabaseSync`.
-- npm v10 or later. The root `package-lock.json` is the dependency source of truth.
+- Node.js 24. The root `.nvmrc` pins the baseline to `24`, and `package.json` accepts `>=24 <25`.
+- npm 11. The root `packageManager` field pins `npm@11.12.1`, and the root `package-lock.json` is the dependency source of truth.
 
 ## Install
 
@@ -71,6 +71,25 @@ Expected response:
 
 If the response is Portless HTML or says no app is registered, restart `npm run dev`.
 
+Use `/ready` when you need a database and migration readiness check that does not call data.gov.sg:
+
+```bash
+curl http://sg-weather-ops-dashboard.localhost:1355/ready
+```
+
+Expected healthy response:
+
+```json
+{
+  "status": "ready",
+  "checks": {
+    "database": "ready",
+    "migrations": "ready",
+    "weather_provider": "not_checked"
+  }
+}
+```
+
 ## Environment
 
 | Variable | Default | Purpose |
@@ -102,6 +121,7 @@ The repository also includes `frontend/.env.local.example` for a standalone Vite
 | `npm run db:migrate` | Applies Drizzle migrations. |
 | `npm run docs` | Starts the Astro Starlight docs site. |
 | `npm run docs:build` | Builds the Astro Starlight docs site. |
+| `npm run docs:check` | Checks local docs links and DeepWiki steering JSON. |
 
 ## Tests and Quality Gate
 
@@ -117,6 +137,7 @@ Before completing a code or documentation task, run the root quality gate:
 npm test
 npm run build
 npm run docs:build
+npm run docs:check
 npm run lint
 ```
 

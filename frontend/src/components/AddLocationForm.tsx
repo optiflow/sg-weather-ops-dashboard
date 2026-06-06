@@ -73,13 +73,13 @@ export function AddLocationForm() {
     event.preventDefault();
     setSubmitting(true);
     setSubmitError(null);
+    const trimmedLabel = label.trim();
     try {
       if (mode === 'area') {
         if (!selectedAreaName) {
           setSubmitError('Select a forecast area');
           return;
         }
-        const trimmedLabel = label.trim();
         await createFromArea({
           name: selectedAreaName,
           label: trimmedLabel ? trimmedLabel : null,
@@ -88,9 +88,14 @@ export function AddLocationForm() {
         setSelectedAreaName('');
         setLabel('');
       } else {
-        await create({ latitude: Number(latitude), longitude: Number(longitude) });
+        await create({
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          label: trimmedLabel ? trimmedLabel : null,
+        });
         setLatitude('');
         setLongitude('');
+        setLabel('');
       }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Could not add location');
@@ -184,35 +189,24 @@ export function AddLocationForm() {
               No forecast areas match.
             </p>
           ) : (
-            <div
-              role="listbox"
-              aria-label="Forecast areas"
-              className="max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-black/10 p-1"
-            >
-              {filteredAreas.map((area) => {
-                const isSelected = selectedAreaName === area.name;
-                return (
-                  <button
-                    key={area.name}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    aria-label={`Select ${area.name}`}
-                    onClick={() => setSelectedAreaName(area.name)}
-                    className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
-                      isSelected
-                        ? 'bg-white/90 text-slate-900'
-                        : 'text-white/75 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <span className="truncate">{area.name}</span>
-                    <span className="shrink-0 text-[10px] tabular-nums opacity-70">
-                      {area.latitude.toFixed(3)}, {area.longitude.toFixed(3)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <label className="grid min-w-0 gap-1">
+              <span className="text-[11px] text-white/60">Forecast area</span>
+              <select
+                value={selectedAreaName}
+                onChange={(event) => setSelectedAreaName(event.target.value)}
+                className="w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white"
+              >
+                {filteredAreas.map((area) => (
+                  <option key={area.name} value={area.name}>
+                    {area.name} ({area.latitude.toFixed(3)}, {area.longitude.toFixed(3)})
+                  </option>
+                ))}
+              </select>
+              <span className="text-[10px] text-white/45" aria-live="polite">
+                {filteredAreas.length} matching forecast area
+                {filteredAreas.length === 1 ? '' : 's'}
+              </span>
+            </label>
           )}
 
           <label className="grid min-w-0 gap-1">
@@ -228,32 +222,45 @@ export function AddLocationForm() {
           </label>
         </>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="grid min-w-0 gap-1">
+              <span className="text-[11px] text-white/60">Latitude</span>
+              <input
+                type="number"
+                step="any"
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                placeholder="1.3508"
+                required
+                className="w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-white/40"
+              />
+            </label>
+            <label className="grid min-w-0 gap-1">
+              <span className="text-[11px] text-white/60">Longitude</span>
+              <input
+                type="number"
+                step="any"
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                placeholder="103.8390"
+                required
+                className="w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-white/40"
+              />
+            </label>
+          </div>
           <label className="grid min-w-0 gap-1">
-            <span className="text-[11px] text-white/60">Latitude</span>
+            <span className="text-[11px] text-white/60">Label (optional)</span>
             <input
-              type="number"
-              step="any"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="1.3508"
-              required
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Optional"
+              maxLength={40}
               className="w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-white/40"
             />
           </label>
-          <label className="grid min-w-0 gap-1">
-            <span className="text-[11px] text-white/60">Longitude</span>
-            <input
-              type="number"
-              step="any"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="103.8390"
-              required
-              className="w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-white/40"
-            />
-          </label>
-        </div>
+        </>
       )}
 
       <div className="flex items-center justify-end gap-2">

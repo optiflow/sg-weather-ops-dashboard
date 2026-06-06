@@ -22,6 +22,7 @@ graph TD
   Sidebar --> SidebarCard["SidebarCard ×N"]
   Hero --> RiskBrief
   Hero --> DataTrustStrip
+  Hero --> TrendPanel
   Hero --> HourlyStrip
   Hero --> TenDayForecast
   Hero --> MapCard
@@ -97,11 +98,11 @@ The API helper treats non-JSON backend responses as server-unavailable failures,
 
 ### `Sidebar`
 
-The left panel that lists all locations as `SidebarCard` components. Includes an accessible search input labeled **Search saved locations** that filters locations by label, forecast area, weather condition, and coordinate text. Recent and Name sort controls are local sidebar state and keep favorite locations first. The sidebar also includes a **Use my location** action and the `AddLocationForm`.
+The left panel that lists all locations as `SidebarCard` components. Includes an accessible search input labeled **Search saved locations** that filters locations by label, forecast area, weather condition, and coordinate text. Recent and Name sort controls are local sidebar state and keep favorite locations first. On small screens, saved locations can collapse behind a compact toggle and close after selection. The sidebar also includes a **Use my location** action and the `AddLocationForm`.
 
 ### `AddLocationForm`
 
-The add panel uses the forecast-area picker as the primary path. It loads sorted canonical areas from `GET /api/forecast-areas`, submits named areas to `POST /api/locations/from-area`, and keeps manual latitude/longitude entry as a secondary mode for explicit coordinate testing.
+The add panel uses the forecast-area picker as the primary path. It loads sorted canonical areas from `GET /api/forecast-areas`, filters the visible choices, and submits named areas to `POST /api/locations/from-area`. Manual latitude/longitude entry remains a secondary mode for explicit coordinate testing and supports the same optional 40-character label cap as forecast-area creates.
 
 ### `UseMyLocationButton`
 
@@ -120,7 +121,7 @@ The main content area showing the selected location's weather. Displays:
 - Observation timestamp and source
 - `RiskBrief`
 - `DataTrustStrip`
-- A **Refresh** button that triggers `POST /api/locations/:id/refresh`
+- `TrendPanel`
 
 ### `RiskBrief`
 
@@ -128,19 +129,23 @@ Builds a frontend-only weather risk recommendation from `frontend/src/weatherRis
 
 ### `DataTrustStrip`
 
-Shows the persisted refresh status, last refresh time, observation time, and unavailable provider signals from `weather.data_quality`. This remains the technical data-quality surface; `RiskBrief` keeps the user-facing recommendation.
+Shows the persisted refresh status, last refresh time, observation time, unavailable provider signals, freshness status, and stale provider signals from `weather.data_quality`. It also contains the **Refresh** button that triggers `POST /api/locations/:id/refresh`. This remains the technical data-quality surface; `RiskBrief` keeps the user-facing recommendation.
+
+### `TrendPanel`
+
+Fetches `GET /api/locations/:id/history` through `listLocationHistory(id, 12)` and renders recent captured observations. It shows an empty state until refreshes create observation rows and does not add a charting dependency.
 
 ### `HourlyStrip`
 
-A grid of 24-hour forecast periods with each period's condition text. If no periods are available, it renders a compact unavailable state.
+A grid of 24-hour forecast periods with each period's condition text and shared condition icon mapping. If no periods are available, it renders a compact unavailable state.
 
 ### `TenDayForecast`
 
-Displays `daily_forecast` as a vertical list with daily high/low temperatures and condition text. The current provider data is a 4-day forecast even though the component name is broader.
+Displays `daily_forecast` as a vertical list with daily high/low temperatures, condition text, and shared condition icon mapping. The current provider data is a 4-day forecast even though the component name is broader.
 
 ### `MapCard`
 
-An interactive Leaflet map showing all saved locations as markers. The normal card disables dragging and scroll zoom; an **Expand map** button opens a fullscreen dialog with focus handling, Escape close, and a screen-reader-only list of saved map locations. `MapBoundsUpdater` fits the map bounds to all saved locations with `useEffect`.
+An interactive Leaflet map showing all saved locations as selectable markers. Selecting a marker updates the selected location, and the selected marker is visually highlighted. The normal card disables dragging and scroll zoom; an **Expand map** button opens a fullscreen dialog with focus handling, Escape close, tab trapping between dialog controls, and a selectable saved-location tray. `MapBoundsUpdater` fits the map bounds to all saved locations with `useEffect`.
 
 ### `TileGrid`
 
@@ -170,6 +175,7 @@ The frontend communicates with the backend through a thin `fetch` wrapper in `sr
 | `updateLocation(id, metadata)` | `PATCH` | `/api/locations/:id` |
 | `deleteLocation(id)` | `DELETE` | `/api/locations/:id` |
 | `refreshLocation(id)` | `POST` | `/api/locations/:id/refresh` |
+| `listLocationHistory(id, limit?)` | `GET` | `/api/locations/:id/history?limit=...` |
 | `logInteraction(event, metadata)` | `POST` | `/api/logs` |
 
 ## Geolocation

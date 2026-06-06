@@ -5,6 +5,7 @@ import type {
   Location,
   LocationFromAreaResponse,
   LocationFromPositionResponse,
+  LocationHistoryResponse,
   UpdateLocationPayload,
 } from './types';
 
@@ -74,6 +75,9 @@ export const deleteLocation = (id: number) =>
 
 export const refreshLocation = (id: number) =>
   request<Location>(`/locations/${id}/refresh`, { method: 'POST' });
+
+export const listLocationHistory = (id: number, limit = 24) =>
+  request<LocationHistoryResponse>(`/locations/${id}/history?limit=${limit}`);
 
 export const updateLocation = (id: number, payload: UpdateLocationPayload) =>
   request<Location>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });

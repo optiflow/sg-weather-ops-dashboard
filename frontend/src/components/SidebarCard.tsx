@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
+import { coordinatesText, locationSecondary, locationTitle } from '../locationDisplay';
 import { useStore } from '../state/store';
 import type { Location } from '../types';
 import { formatTemperature, formatTime } from './format';
@@ -7,17 +8,10 @@ import { CloseIcon, CloudIcon, PencilIcon, StarIcon } from './icons';
 
 interface SidebarCardProps {
   location: Location;
+  onSelected?: () => void;
 }
 
-function coordinatesText(location: Location): string {
-  return `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
-}
-
-function displayTitle(location: Location): string {
-  return location.label?.trim() || location.weather.area || coordinatesText(location);
-}
-
-export function SidebarCard({ location }: SidebarCardProps) {
+export function SidebarCard({ location, onSelected }: SidebarCardProps) {
   const { selectedId, select, remove, update } = useStore();
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
@@ -30,15 +24,18 @@ export function SidebarCard({ location }: SidebarCardProps) {
   const coordinates = coordinatesText(location);
   const forecastArea = location.weather.area || null;
   const customLabel = location.label?.trim() ?? '';
-  const title = displayTitle(location);
-  const secondary = customLabel ? forecastArea || coordinates : observed || 'Not refreshed';
+  const title = locationTitle(location);
+  const secondary = locationSecondary(location, observed || 'Not refreshed');
   const condition = location.weather.condition || '-';
   const temperature = formatTemperature(location.weather.temperature_c);
   const high = formatTemperature(location.weather.forecast_high_c);
   const low = formatTemperature(location.weather.forecast_low_c);
   const isFavorite = Boolean(location.is_favorite);
 
-  const onSelect = () => select(location.id);
+  const onSelect = () => {
+    select(location.id);
+    onSelected?.();
+  };
 
   useEffect(() => {
     if (!isEditingLabel) setDraftLabel(location.label ?? '');
@@ -184,7 +181,7 @@ export function SidebarCard({ location }: SidebarCardProps) {
               value={draftLabel}
               onChange={(event) => setDraftLabel(event.target.value)}
               placeholder={forecastArea || coordinates}
-              maxLength={80}
+              maxLength={40}
               className="w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-white/40"
             />
           </label>

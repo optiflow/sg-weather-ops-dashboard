@@ -3,7 +3,7 @@ title: Adding Locations
 description: How locations are created, stored, and managed in SG Weather Ops Dashboard.
 ---
 
-SG Weather Ops Dashboard stores saved locations in SQLite and keeps one latest weather snapshot per location. The primary add path is the forecast-area picker, which saves canonical Singapore 2-hour forecast areas. Manual latitude/longitude entry remains available as a secondary mode for explicit coordinate testing, and **Use my location** resolves the browser position to the nearest canonical forecast area.
+SG Weather Ops Dashboard stores saved locations in SQLite and keeps one latest weather snapshot per location. Refreshes also append observation history. The primary add path is the forecast-area picker, which saves canonical Singapore 2-hour forecast areas. Manual latitude/longitude entry remains available as a secondary mode for explicit coordinate testing, and **Use my location** resolves the browser position to the nearest canonical forecast area.
 
 The backend only accepts coordinates inside the app's Singapore bounding box:
 
@@ -79,7 +79,8 @@ The app selects the existing location instead of creating a duplicate. If a `lab
 1. Click **Add Location** in the sidebar.
 2. Switch to manual coordinate mode.
 3. Enter a Singapore latitude and longitude.
-4. Submit the form. The frontend calls `POST /api/locations`.
+4. Optionally enter a personal label, capped at 40 characters.
+5. Submit the form. The frontend calls `POST /api/locations`.
 
 The backend then:
 
@@ -100,7 +101,7 @@ sequenceDiagram
   participant DB as SQLite
   participant Gov as data.gov.sg
 
-  UI->>Store: create({ latitude, longitude })
+  UI->>Store: create({ latitude, longitude, label })
   Store->>API: POST /api/locations
   API->>API: Validate Singapore coordinate
   API->>DB: INSERT default weather row
@@ -191,14 +192,17 @@ The app selects the existing location instead of creating a duplicate.
 
 ## Refreshing Weather
 
-Click the **Refresh** button on a location's detail view. This calls `POST /api/locations/:id/refresh`, which:
+Click the **Refresh** button in the Data Trust strip on a location's detail view. This calls `POST /api/locations/:id/refresh`, which:
 
 1. Looks up the location's coordinates in SQLite.
 2. Fetches fresh data from all data.gov.sg endpoints.
-3. Updates the weather columns in the database.
-4. Returns the updated location.
+3. Updates the latest weather columns in the database.
+4. Records a refresh attempt and a weather observation when a fetched snapshot is captured.
+5. Returns the updated location.
 
 Individual provider failures can still produce a partial or `Unavailable` snapshot. The response includes `weather.data_quality`, which the UI renders in the Data Trust strip. If the weather client rejects outside that settled endpoint flow, the endpoint returns `502 Bad Gateway`.
+
+Recent manual refreshes can be throttled, and overlapping refreshes for the same location can be coalesced. The latest snapshot remains the main dashboard state; recent observation rows are available through `GET /api/locations/:id/history`.
 
 ## Deleting a Location
 
@@ -218,6 +222,8 @@ Each saved location includes:
 | --- | --- |
 | `label` | Optional user-facing name for the saved place. `null` means the UI falls back to the forecast area or coordinates. |
 | `is_favorite` | Boolean favorite flag used by the sidebar to keep favorites first. |
+
+Labels are capped at 40 characters after trimming. Forecast-area creates, manual-coordinate creates, and label edits all use the same cap.
 
 Label and favorite edits call `PATCH /api/locations/:locationId` with:
 

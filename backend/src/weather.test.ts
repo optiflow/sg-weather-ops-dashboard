@@ -143,6 +143,8 @@ describe('SingaporeWeatherClient forecast-area matching', () => {
         status: 'complete',
         last_refreshed_at: '2026-05-04T01:00:00.000Z',
         unavailable_signals: [],
+        freshness_status: 'fresh',
+        stale_signals: [],
       },
     });
   });
@@ -171,6 +173,8 @@ describe('SingaporeWeatherClient forecast-area matching', () => {
       status: 'partial',
       last_refreshed_at: '2026-05-04T01:00:00.000Z',
       unavailable_signals: ['uv'],
+      freshness_status: 'fresh',
+      stale_signals: [],
     });
   });
 
@@ -231,6 +235,8 @@ describe('SingaporeWeatherClient forecast-area matching', () => {
         'twenty_four_hour_forecast',
         'four_day_forecast',
       ],
+      freshness_status: 'unknown',
+      stale_signals: [],
     });
   });
 
@@ -255,6 +261,49 @@ describe('SingaporeWeatherClient forecast-area matching', () => {
     expect(snapshot.temperature_c).toBeNull();
     expect(snapshot.data_quality.status).toBe('partial');
     expect(snapshot.data_quality.unavailable_signals).toContain('air_temperature');
+  });
+
+  it('marks stale provider signals without failing the whole snapshot', async () => {
+    vi.stubGlobal('fetch', fetchFromFixtures());
+
+    const client = new SingaporeWeatherClient({
+      timeoutMs: 1000,
+      now: () => new Date('2026-05-04T04:30:00Z'),
+    });
+    const snapshot = await client.getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot.data_quality.freshness_status).toBe('stale');
+    expect(snapshot.data_quality.stale_signals).toEqual(
+      expect.arrayContaining([
+        'two_hour_forecast',
+        'air_temperature',
+        'relative_humidity',
+        'rainfall',
+        'wind_speed',
+        'wind_direction',
+        'uv',
+        'psi',
+        'pm25',
+      ]),
+    );
+  });
+
+  it('caches and coalesces provider requests for repeated snapshots', async () => {
+    const fetch = fetchFromFixtures();
+    vi.stubGlobal('fetch', fetch);
+
+    const client = new SingaporeWeatherClient({
+      timeoutMs: 1000,
+      now: () => new Date('2026-05-04T01:00:00Z'),
+    });
+    await Promise.all([
+      client.getCurrentWeather(1.35, 103.85),
+      client.getCurrentWeather(1.352, 103.849),
+    ]);
+
+    expect(fetch).toHaveBeenCalledTimes(11);
+    await client.getCurrentWeather(1.35, 103.85);
+    expect(fetch).toHaveBeenCalledTimes(11);
   });
 });
 

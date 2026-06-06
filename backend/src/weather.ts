@@ -156,6 +156,7 @@ export interface TwoHourForecastArea {
 }
 
 export type RefreshStatus = 'unknown' | 'not_refreshed' | 'complete' | 'partial' | 'unavailable';
+export type FreshnessStatus = 'unknown' | 'not_refreshed' | 'fresh' | 'stale';
 
 export type WeatherSignal =
   | 'two_hour_forecast'
@@ -174,6 +175,8 @@ export interface WeatherDataQuality {
   status: RefreshStatus;
   last_refreshed_at: string | null;
   unavailable_signals: WeatherSignal[];
+  freshness_status: FreshnessStatus;
+  stale_signals: WeatherSignal[];
 }
 
 export interface WeatherSnapshot {
@@ -212,6 +215,12 @@ const weatherSignals: WeatherSignal[] = [
   'four_day_forecast',
 ];
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+const ONE_MINUTE_MS = 60 * 1000;
+const FIVE_MINUTES_MS = 5 * ONE_MINUTE_MS;
+
 type Settled<T> =
   | {
       status: 'fulfilled';
@@ -223,6 +232,9 @@ type Settled<T> =
     };
 
 export class SingaporeWeatherClient {
+  private readonly responseCache = new Map<string, { expiresAt: number; value: unknown }>();
+  private readonly inflightFetches = new Map<string, Promise<unknown>>();
+
   constructor(
     private readonly options: {
       baseUrl?: string;
@@ -242,7 +254,8 @@ export class SingaporeWeatherClient {
       windSpeed,
       windDirection,
       uvIndex,
-      airQuality,
+      psi,
+      pm25,
       twentyFourHour,
       fourDay,
     ] = (await runSettled(
@@ -254,7 +267,8 @@ export class SingaporeWeatherClient {
         () => this.fetchNearestReading('wind-speed', latitude, longitude),
         () => this.fetchNearestReading('wind-direction', latitude, longitude),
         () => this.fetchUvIndex(),
-        () => this.fetchAirQuality(latitude, longitude),
+        () => this.fetchAirQualityReading('psi', latitude, longitude),
+        () => this.fetchAirQualityReading('pm25', latitude, longitude),
         () => this.fetchTwentyFourHourForecast(latitude, longitude),
         () => this.fetchFourDayForecast(),
       ],
@@ -267,12 +281,8 @@ export class SingaporeWeatherClient {
       Settled<{ value: number | null; timestamp: string | null }>,
       Settled<{ value: number | null; timestamp: string | null }>,
       Settled<{ value: number | null; timestamp: string | null }>,
-      Settled<{
-        psi: number | null;
-        pm25: number | null;
-        region: string | null;
-        timestamp: string | null;
-      }>,
+      Settled<{ value: number | null; region: string | null; timestamp: string | null }>,
+      Settled<{ value: number | null; region: string | null; timestamp: string | null }>,
       Settled<{
         low: number | null;
         high: number | null;
@@ -284,6 +294,7 @@ export class SingaporeWeatherClient {
 
     const usableSignals = new Set<WeatherSignal>();
     const unavailableSignals = new Set<WeatherSignal>();
+    const signalTimestamps = new Map<WeatherSignal, string | null>();
     let snapshot = this.emptyForecastSnapshot();
 
     if (forecastPayload.status === 'fulfilled') {
@@ -291,6 +302,7 @@ export class SingaporeWeatherClient {
         snapshot = this.snapshotFromPayload(forecastPayload.value, latitude, longitude);
         if (snapshot.condition && snapshot.condition !== 'Unavailable') {
           usableSignals.add('two_hour_forecast');
+          signalTimestamps.set('two_hour_forecast', snapshot.observed_at);
         } else {
           unavailableSignals.add('two_hour_forecast');
         }
@@ -322,15 +334,23 @@ export class SingaporeWeatherClient {
       snapshot.uv_index = value;
     });
 
-    if (airQuality.status === 'fulfilled') {
-      snapshot.psi_twenty_four_hourly = airQuality.value.psi;
-      snapshot.pm25_one_hourly = airQuality.value.pm25;
-      snapshot.air_quality_region = airQuality.value.region;
-      timestamps.push(airQuality.value.timestamp);
-      markSignalValue('psi', airQuality.value.psi);
-      markSignalValue('pm25', airQuality.value.pm25);
+    if (psi.status === 'fulfilled') {
+      snapshot.psi_twenty_four_hourly = psi.value.value;
+      snapshot.air_quality_region = psi.value.region;
+      timestamps.push(psi.value.timestamp);
+      signalTimestamps.set('psi', psi.value.timestamp);
+      markSignalValue('psi', psi.value.value);
     } else {
       unavailableSignals.add('psi');
+    }
+
+    if (pm25.status === 'fulfilled') {
+      snapshot.pm25_one_hourly = pm25.value.value;
+      snapshot.air_quality_region = snapshot.air_quality_region ?? pm25.value.region;
+      timestamps.push(pm25.value.timestamp);
+      signalTimestamps.set('pm25', pm25.value.timestamp);
+      markSignalValue('pm25', pm25.value.value);
+    } else {
       unavailableSignals.add('pm25');
     }
 
@@ -339,6 +359,7 @@ export class SingaporeWeatherClient {
       snapshot.forecast_high_c = twentyFourHour.value.high;
       snapshot.forecast_periods = twentyFourHour.value.periods;
       timestamps.push(twentyFourHour.value.timestamp);
+      signalTimestamps.set('twenty_four_hour_forecast', twentyFourHour.value.timestamp);
       if (
         isFiniteNumber(twentyFourHour.value.low) ||
         isFiniteNumber(twentyFourHour.value.high) ||
@@ -355,6 +376,7 @@ export class SingaporeWeatherClient {
     if (fourDay.status === 'fulfilled') {
       snapshot.daily_forecast = fourDay.value.days;
       timestamps.push(fourDay.value.timestamp);
+      signalTimestamps.set('four_day_forecast', fourDay.value.timestamp);
       if (fourDay.value.days.length > 0) {
         usableSignals.add('four_day_forecast');
       } else {
@@ -369,10 +391,19 @@ export class SingaporeWeatherClient {
       snapshot.observed_at = latest;
     }
 
+    const now = (this.options.now ?? (() => new Date()))();
+    const staleSignals = weatherSignals.filter(
+      (signal) =>
+        usableSignals.has(signal) && isStaleSignal(signal, signalTimestamps.get(signal), now),
+    );
+
     snapshot.data_quality = {
       status: refreshStatus(usableSignals.size, unavailableSignals.size),
-      last_refreshed_at: (this.options.now ?? (() => new Date()))().toISOString(),
+      last_refreshed_at: now.toISOString(),
       unavailable_signals: weatherSignals.filter((signal) => unavailableSignals.has(signal)),
+      freshness_status:
+        usableSignals.size === 0 ? 'unknown' : staleSignals.length > 0 ? 'stale' : 'fresh',
+      stale_signals: staleSignals,
     };
 
     return snapshot;
@@ -385,6 +416,7 @@ export class SingaporeWeatherClient {
       if (result.status === 'fulfilled') {
         assign(result.value.value);
         timestamps.push(result.value.timestamp);
+        signalTimestamps.set(signal, result.value.timestamp);
         markSignalValue(signal, result.value.value);
         return;
       }
@@ -500,40 +532,31 @@ export class SingaporeWeatherClient {
     };
   }
 
-  async fetchAirQuality(
+  async fetchAirQualityReading(
+    signal: 'psi' | 'pm25',
     latitude: number,
     longitude: number,
   ): Promise<{
-    psi: number | null;
-    pm25: number | null;
+    value: number | null;
     region: string | null;
     timestamp: string | null;
   }> {
-    const psiPayload = await this.fetchJson<PsiPayload>(
-      `${this.apiBaseUrl()}/v2/real-time/api/psi`,
+    const payload = await this.fetchJson<PsiPayload>(
+      `${this.apiBaseUrl()}/v2/real-time/api/${signal}`,
     );
-    const pm25Payload = await this.fetchJson<PsiPayload>(
-      `${this.apiBaseUrl()}/v2/real-time/api/pm25`,
-    );
-    for (const payload of [psiPayload, pm25Payload]) {
-      if (payload.code !== undefined && payload.code !== 0) {
-        throw new WeatherProviderError(
-          payload.errorMsg ?? 'Weather provider returned an air quality error',
-        );
-      }
+    if (payload.code !== undefined && payload.code !== 0) {
+      throw new WeatherProviderError(
+        payload.errorMsg ?? `Weather provider returned an error for ${signal}`,
+      );
     }
 
-    const region = nearestRegionName(psiPayload.data?.regionMetadata ?? [], latitude, longitude);
-    const psiItem = psiPayload.data?.items?.[0];
-    const pm25Item = pm25Payload.data?.items?.[0];
+    const region = nearestRegionName(payload.data?.regionMetadata ?? [], latitude, longitude);
+    const item = payload.data?.items?.[0];
+    const key = signal === 'psi' ? 'psi_twenty_four_hourly' : 'pm25_one_hourly';
     return {
-      psi: valueForRegion(psiItem?.readings?.psi_twenty_four_hourly, region),
-      pm25: valueForRegion(pm25Item?.readings?.pm25_one_hourly, region),
+      value: valueForRegion(item?.readings?.[key], region),
       region,
-      timestamp: latestTimestamp([
-        psiItem?.updatedTimestamp ?? psiItem?.timestamp ?? null,
-        pm25Item?.updatedTimestamp ?? pm25Item?.timestamp ?? null,
-      ]),
+      timestamp: item?.updatedTimestamp ?? item?.timestamp ?? null,
     };
   }
 
@@ -600,6 +623,28 @@ export class SingaporeWeatherClient {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
+    const now = Date.now();
+    const cached = this.responseCache.get(url);
+    if (cached && cached.expiresAt > now) return cached.value as T;
+
+    const inflight = this.inflightFetches.get(url);
+    if (inflight) return (await inflight) as T;
+
+    const request = this.fetchJsonUncached<T>(url);
+    this.inflightFetches.set(url, request as Promise<unknown>);
+    try {
+      const value = await request;
+      this.responseCache.set(url, {
+        value,
+        expiresAt: now + providerCacheTtlMs(url),
+      });
+      return value;
+    } finally {
+      this.inflightFetches.delete(url);
+    }
+  }
+
+  private async fetchJsonUncached<T>(url: string): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 8000);
 
@@ -773,7 +818,27 @@ function unknownDataQuality(): WeatherDataQuality {
     status: 'unknown',
     last_refreshed_at: null,
     unavailable_signals: [],
+    freshness_status: 'unknown',
+    stale_signals: [],
   };
+}
+
+function providerCacheTtlMs(url: string): number {
+  if (url.includes('/two-hr-forecast')) return FIVE_MINUTES_MS;
+  if (url.includes('/twenty-four-hr-forecast')) return FIVE_MINUTES_MS;
+  if (url.includes('/4-day-weather-forecast')) return TWELVE_HOURS_MS;
+  return ONE_MINUTE_MS;
+}
+
+function isStaleSignal(signal: WeatherSignal, timestamp: string | null | undefined, now: Date) {
+  if (!timestamp) return false;
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const ageMs = now.getTime() - parsed.getTime();
+  if (ageMs < 0) return false;
+  if (signal === 'four_day_forecast') return ageMs > TWENTY_FOUR_HOURS_MS;
+  if (signal === 'twenty_four_hour_forecast') return ageMs > TWELVE_HOURS_MS;
+  return ageMs > TWO_HOURS_MS;
 }
 
 function forecastAreasFromPayload(payload: ForecastPayload): TwoHourForecastArea[] {

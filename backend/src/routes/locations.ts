@@ -2,10 +2,15 @@ import type { Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 import {
   createLocation,
+  createRefreshAttempt,
+  createWeatherObservation,
   deleteLocation,
+  getLatestRefreshAttempt,
   getLocation,
   getLocationByCoordinates,
+  type LocationRecord,
   listLocations,
+  listWeatherObservations,
   updateLocationMetadata,
   updateWeather,
 } from '../db.js';
@@ -27,6 +32,11 @@ export interface WeatherClient {
 interface LocationsRouterOptions {
   weatherClient?: WeatherClient;
 }
+
+type RefreshTrigger = 'create' | 'manual';
+
+const inFlightRefreshes = new Map<number, Promise<LocationRecord>>();
+const REFRESH_THROTTLE_MS = 60 * 1000;
 
 export function createLocationsRouter(options: LocationsRouterOptions = {}): Router {
   const router: Router = createRouter();
@@ -110,14 +120,8 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
       }
 
       try {
-        const snapshot = await weatherClient.getCurrentWeather(
-          location.latitude,
-          location.longitude,
-        );
-        const updated = await updateWeather(location.id, snapshot);
-        response
-          .status(201)
-          .json({ location: updated ?? location, created: true, matched_area: matchedArea });
+        const updated = await refreshWeatherForLocation(location, 'create', weatherClient);
+        response.status(201).json({ location: updated, created: true, matched_area: matchedArea });
       } catch (error) {
         if (!(error instanceof WeatherProviderError)) throw error;
         const locationWithMatchedArea = (await updateWeather(location.id, {
@@ -193,14 +197,8 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
       }
 
       try {
-        const snapshot = await weatherClient.getCurrentWeather(
-          location.latitude,
-          location.longitude,
-        );
-        const updated = await updateWeather(location.id, snapshot);
-        response
-          .status(201)
-          .json({ location: updated ?? location, created: true, matched_area: matchedArea });
+        const updated = await refreshWeatherForLocation(location, 'create', weatherClient);
+        response.status(201).json({ location: updated, created: true, matched_area: matchedArea });
       } catch (error) {
         if (!(error instanceof WeatherProviderError)) throw error;
         const locationWithMatchedArea = (await updateWeather(location.id, {
@@ -251,12 +249,8 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
       const location = await createLocation(latitude, longitude, { label });
 
       try {
-        const snapshot = await weatherClient.getCurrentWeather(
-          location.latitude,
-          location.longitude,
-        );
-        const updated = await updateWeather(location.id, snapshot);
-        response.status(201).json(updated ?? location);
+        const updated = await refreshWeatherForLocation(location, 'create', weatherClient);
+        response.status(201).json(updated);
       } catch (error) {
         if (!(error instanceof WeatherProviderError)) throw error;
         logger.warn(
@@ -271,6 +265,22 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
         response.status(409).json({ detail: error.message });
         return;
       }
+      next(error);
+    }
+  });
+
+  router.get('/locations/:locationId/history', async (request, response, next) => {
+    try {
+      const locationId = Number(request.params.locationId);
+      const location = await getLocation(locationId);
+      if (!location) {
+        response.status(404).json({ detail: 'Location not found' });
+        return;
+      }
+      const rawLimit = Number(request.query.limit ?? 24);
+      const limit = Number.isFinite(rawLimit) ? rawLimit : 24;
+      response.json({ observations: await listWeatherObservations(locationId, limit) });
+    } catch (error) {
       next(error);
     }
   });
@@ -346,14 +356,12 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
         return;
       }
 
-      const snapshot = await weatherClient.getCurrentWeather(location.latitude, location.longitude);
-      const updated = await updateWeather(locationId, snapshot);
-      if (!updated) {
+      response.json(await refreshWeatherForLocation(location, 'manual', weatherClient));
+    } catch (error) {
+      if (error instanceof LocationMissingAfterRefreshError) {
         response.status(404).json({ detail: 'Location not found' });
         return;
       }
-      response.json(updated);
-    } catch (error) {
       if (error instanceof WeatherProviderError) {
         response.status(502).json({ detail: error.message });
         return;
@@ -363,6 +371,119 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
   });
 
   return router;
+}
+
+async function refreshWeatherForLocation(
+  location: LocationRecord,
+  trigger: RefreshTrigger,
+  weatherClient: WeatherClient,
+): Promise<LocationRecord> {
+  const startedAt = new Date().toISOString();
+  if (trigger === 'manual') {
+    const inFlight = inFlightRefreshes.get(location.id);
+    if (inFlight) {
+      const updated = await inFlight;
+      await createRefreshAttempt({
+        locationId: location.id,
+        trigger,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        outcome: 'coalesced',
+        coverageStatus: updated.weather.data_quality.status,
+        freshnessStatus: updated.weather.data_quality.freshness_status,
+        unavailableSignals: updated.weather.data_quality.unavailable_signals,
+        staleSignals: updated.weather.data_quality.stale_signals,
+      });
+      return updated;
+    }
+
+    const refreshPromise = refreshManualWeatherForLocation(location, startedAt, weatherClient);
+    inFlightRefreshes.set(location.id, refreshPromise);
+    try {
+      return await refreshPromise;
+    } finally {
+      inFlightRefreshes.delete(location.id);
+    }
+  }
+
+  return performWeatherRefresh(location, trigger, startedAt, weatherClient);
+}
+
+async function refreshManualWeatherForLocation(
+  location: LocationRecord,
+  startedAt: string,
+  weatherClient: WeatherClient,
+): Promise<LocationRecord> {
+  const latestAttempt = await getLatestRefreshAttempt(location.id);
+  if (
+    latestAttempt?.completed_at &&
+    latestAttempt.outcome === 'fetched' &&
+    latestAttempt.trigger === 'manual' &&
+    Date.now() - new Date(latestAttempt.completed_at).getTime() < REFRESH_THROTTLE_MS
+  ) {
+    await createRefreshAttempt({
+      locationId: location.id,
+      trigger: 'manual',
+      startedAt,
+      completedAt: new Date().toISOString(),
+      outcome: 'throttled',
+      coverageStatus: location.weather.data_quality.status,
+      freshnessStatus: location.weather.data_quality.freshness_status,
+      unavailableSignals: location.weather.data_quality.unavailable_signals,
+      staleSignals: location.weather.data_quality.stale_signals,
+    });
+    return location;
+  }
+
+  return performWeatherRefresh(location, 'manual', startedAt, weatherClient);
+}
+
+async function performWeatherRefresh(
+  location: LocationRecord,
+  trigger: RefreshTrigger,
+  startedAt: string,
+  weatherClient: WeatherClient,
+): Promise<LocationRecord> {
+  try {
+    const snapshot = await weatherClient.getCurrentWeather(location.latitude, location.longitude);
+    const updated = await updateWeather(location.id, snapshot);
+    if (!updated) throw new LocationMissingAfterRefreshError();
+    const attempt = await createRefreshAttempt({
+      locationId: location.id,
+      trigger,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      outcome: 'fetched',
+      coverageStatus: snapshot.data_quality.status,
+      freshnessStatus: snapshot.data_quality.freshness_status,
+      unavailableSignals: snapshot.data_quality.unavailable_signals,
+      staleSignals: snapshot.data_quality.stale_signals,
+    });
+    await createWeatherObservation(location.id, attempt.id, snapshot);
+    return updated;
+  } catch (error) {
+    if (error instanceof LocationMissingAfterRefreshError) throw error;
+    await createRefreshAttempt({
+      locationId: location.id,
+      trigger,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      outcome: 'failed',
+      coverageStatus: location.weather.data_quality.status,
+      freshnessStatus: location.weather.data_quality.freshness_status,
+      unavailableSignals: location.weather.data_quality.unavailable_signals,
+      staleSignals: location.weather.data_quality.stale_signals,
+      errorType: error instanceof WeatherProviderError ? 'weather_provider' : 'internal',
+      errorMessage: error instanceof Error ? error.message.slice(0, 160) : 'Unknown error',
+    });
+    throw error;
+  }
+}
+
+class LocationMissingAfterRefreshError extends Error {
+  constructor() {
+    super('Location not found');
+  }
 }
 
 function isFiniteNumber(value: unknown): value is number {

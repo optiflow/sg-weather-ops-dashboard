@@ -5,11 +5,16 @@ import { and, desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migrate } from 'drizzle-orm/sqlite-proxy/migrator';
 import {
+  type FreshnessStatus,
   locations,
+  type RefreshAttemptOutcome,
+  type RefreshAttemptTrigger,
   type RefreshStatus,
+  refreshAttempts,
   type WeatherDataQuality,
   type WeatherSignal,
   type WeatherSnapshot,
+  weatherObservations,
 } from './schema.js';
 
 export interface LocationRecord {
@@ -22,7 +27,35 @@ export interface LocationRecord {
   weather: WeatherSnapshot;
 }
 
+export interface RefreshAttemptRecord {
+  id: number;
+  location_id: number;
+  trigger: RefreshAttemptTrigger;
+  started_at: string;
+  completed_at: string | null;
+  outcome: RefreshAttemptOutcome;
+  coverage_status: RefreshStatus;
+  freshness_status: FreshnessStatus;
+  unavailable_signals: WeatherSignal[];
+  stale_signals: WeatherSignal[];
+  served_from_cache: boolean;
+  coalesced_to_attempt_id: number | null;
+  error_type: string | null;
+  error_message: string | null;
+}
+
+export interface WeatherObservationRecord {
+  id: number;
+  location_id: number;
+  refresh_attempt_id: number;
+  captured_at: string;
+  observed_at: string | null;
+  weather: WeatherSnapshot;
+}
+
 type LocationRow = typeof locations.$inferSelect;
+type RefreshAttemptRow = typeof refreshAttempts.$inferSelect;
+type WeatherObservationRow = typeof weatherObservations.$inferSelect;
 
 const defaultWeather: WeatherSnapshot = {
   condition: 'Not refreshed',
@@ -47,6 +80,8 @@ const defaultWeather: WeatherSnapshot = {
     status: 'not_refreshed',
     last_refreshed_at: null,
     unavailable_signals: [],
+    freshness_status: 'not_refreshed',
+    stale_signals: [],
   },
 };
 
@@ -54,6 +89,8 @@ const unknownDataQuality: WeatherDataQuality = {
   status: 'unknown',
   last_refreshed_at: null,
   unavailable_signals: [],
+  freshness_status: 'unknown',
+  stale_signals: [],
 };
 
 const refreshStatuses = new Set<RefreshStatus>([
@@ -63,6 +100,7 @@ const refreshStatuses = new Set<RefreshStatus>([
   'partial',
   'unavailable',
 ]);
+const freshnessStatuses = new Set<FreshnessStatus>(['unknown', 'not_refreshed', 'fresh', 'stale']);
 
 const weatherSignals = new Set<WeatherSignal>([
   'two_hour_forecast',
@@ -82,8 +120,9 @@ const databasePath = process.env.DATABASE_PATH ?? join(process.cwd(), 'backend',
 mkdirSync(dirname(databasePath), { recursive: true });
 
 const sqlite = new DatabaseSync(databasePath);
+sqlite.exec('PRAGMA foreign_keys = ON');
 sqlite.exec('PRAGMA journal_mode = WAL');
-const db = drizzle(sqliteCallback, { schema: { locations } });
+const db = drizzle(sqliteCallback, { schema: { locations, refreshAttempts, weatherObservations } });
 await migrate(
   db,
   async (migrationQueries) => {
@@ -163,6 +202,91 @@ export async function updateWeather(
   return row ? rowToRecord(row) : null;
 }
 
+export async function createRefreshAttempt(values: {
+  locationId: number;
+  trigger: RefreshAttemptTrigger;
+  startedAt: string;
+  completedAt?: string | null;
+  outcome: RefreshAttemptOutcome;
+  coverageStatus: RefreshStatus;
+  freshnessStatus: FreshnessStatus;
+  unavailableSignals?: WeatherSignal[];
+  staleSignals?: WeatherSignal[];
+  servedFromCache?: boolean;
+  coalescedToAttemptId?: number | null;
+  errorType?: string | null;
+  errorMessage?: string | null;
+}): Promise<RefreshAttemptRecord> {
+  const row = await db
+    .insert(refreshAttempts)
+    .values({
+      locationId: values.locationId,
+      trigger: values.trigger,
+      startedAt: values.startedAt,
+      completedAt: values.completedAt ?? null,
+      outcome: values.outcome,
+      coverageStatus: values.coverageStatus,
+      freshnessStatus: values.freshnessStatus,
+      unavailableSignals: values.unavailableSignals ?? [],
+      staleSignals: values.staleSignals ?? [],
+      signalResults: [],
+      servedFromCache: values.servedFromCache ?? false,
+      coalescedToAttemptId: values.coalescedToAttemptId ?? null,
+      errorType: values.errorType ?? null,
+      errorMessage: values.errorMessage ?? null,
+    })
+    .returning()
+    .get();
+  return refreshAttemptToRecord(row);
+}
+
+export async function createWeatherObservation(
+  locationId: number,
+  refreshAttemptId: number,
+  weather: WeatherSnapshot,
+): Promise<WeatherObservationRecord> {
+  const capturedAt = weather.data_quality.last_refreshed_at ?? new Date().toISOString();
+  const row = await db
+    .insert(weatherObservations)
+    .values({
+      locationId,
+      refreshAttemptId,
+      capturedAt,
+      ...weatherToColumns(weather),
+    })
+    .returning()
+    .get();
+  return weatherObservationToRecord(row);
+}
+
+export async function listWeatherObservations(
+  locationId: number,
+  limit = 24,
+): Promise<WeatherObservationRecord[]> {
+  const boundedLimit = Math.max(1, Math.min(Math.trunc(limit), 168));
+  return (
+    await db
+      .select()
+      .from(weatherObservations)
+      .where(eq(weatherObservations.locationId, locationId))
+      .orderBy(desc(weatherObservations.capturedAt), desc(weatherObservations.id))
+      .limit(boundedLimit)
+      .all()
+  ).map(weatherObservationToRecord);
+}
+
+export async function getLatestRefreshAttempt(
+  locationId: number,
+): Promise<RefreshAttemptRecord | null> {
+  const row = await db
+    .select()
+    .from(refreshAttempts)
+    .where(eq(refreshAttempts.locationId, locationId))
+    .orderBy(desc(refreshAttempts.completedAt), desc(refreshAttempts.id))
+    .get();
+  return row ? refreshAttemptToRecord(row) : null;
+}
+
 export async function updateLocationMetadata(
   id: number,
   metadata: { label?: string | null; isFavorite?: boolean },
@@ -176,7 +300,11 @@ export async function updateLocationMetadata(
 }
 
 export async function resetStore(): Promise<void> {
+  await db.delete(weatherObservations).run();
+  await db.delete(refreshAttempts).run();
   await db.delete(locations).run();
+  sqlite.prepare("DELETE FROM sqlite_sequence WHERE name = 'weather_observations'").run();
+  sqlite.prepare("DELETE FROM sqlite_sequence WHERE name = 'refresh_attempts'").run();
   sqlite.prepare("DELETE FROM sqlite_sequence WHERE name = 'locations'").run();
 }
 
@@ -262,6 +390,56 @@ function rowToRecord(row: LocationRow): LocationRecord {
   };
 }
 
+function refreshAttemptToRecord(row: RefreshAttemptRow): RefreshAttemptRecord {
+  return {
+    id: row.id,
+    location_id: row.locationId,
+    trigger: row.trigger,
+    started_at: row.startedAt,
+    completed_at: row.completedAt,
+    outcome: row.outcome,
+    coverage_status: row.coverageStatus,
+    freshness_status: row.freshnessStatus,
+    unavailable_signals: normalizeSignals(row.unavailableSignals),
+    stale_signals: normalizeSignals(row.staleSignals),
+    served_from_cache: Boolean(row.servedFromCache),
+    coalesced_to_attempt_id: row.coalescedToAttemptId,
+    error_type: row.errorType,
+    error_message: row.errorMessage,
+  };
+}
+
+function weatherObservationToRecord(row: WeatherObservationRow): WeatherObservationRecord {
+  return {
+    id: row.id,
+    location_id: row.locationId,
+    refresh_attempt_id: row.refreshAttemptId,
+    captured_at: row.capturedAt,
+    observed_at: row.observedAt,
+    weather: {
+      condition: row.condition,
+      observed_at: row.observedAt,
+      source: row.source,
+      area: row.area,
+      valid_period_text: row.validPeriodText,
+      temperature_c: row.temperatureC,
+      humidity_percent: row.humidityPercent,
+      rainfall_mm: row.rainfallMm,
+      wind_speed_knots: row.windSpeedKnots,
+      wind_direction_degrees: row.windDirectionDegrees,
+      forecast_low_c: row.forecastLowC,
+      forecast_high_c: row.forecastHighC,
+      uv_index: row.uvIndex,
+      psi_twenty_four_hourly: row.psiTwentyFourHourly,
+      pm25_one_hourly: row.pm25OneHourly,
+      air_quality_region: row.airQualityRegion,
+      forecast_periods: row.forecastPeriods,
+      daily_forecast: row.dailyForecast,
+      data_quality: normalizeDataQuality(row.dataQuality),
+    },
+  };
+}
+
 function normalizeDataQuality(value: unknown): WeatherDataQuality {
   if (!value || typeof value !== 'object') return unknownDataQuality;
 
@@ -271,17 +449,27 @@ function normalizeDataQuality(value: unknown): WeatherDataQuality {
     : unknownDataQuality.status;
   const lastRefreshedAt =
     typeof candidate.last_refreshed_at === 'string' ? candidate.last_refreshed_at : null;
-  const unavailableSignals = Array.isArray(candidate.unavailable_signals)
-    ? candidate.unavailable_signals.filter((signal): signal is WeatherSignal =>
-        weatherSignals.has(signal as WeatherSignal),
-      )
-    : [];
+  const unavailableSignals = normalizeSignals(candidate.unavailable_signals);
+  const staleSignals = normalizeSignals(candidate.stale_signals);
+  const freshnessStatus = freshnessStatuses.has(candidate.freshness_status as FreshnessStatus)
+    ? (candidate.freshness_status as FreshnessStatus)
+    : status === 'not_refreshed'
+      ? 'not_refreshed'
+      : unknownDataQuality.freshness_status;
 
   return {
     status,
     last_refreshed_at: lastRefreshedAt,
     unavailable_signals: unavailableSignals,
+    freshness_status: freshnessStatus,
+    stale_signals: staleSignals,
   };
+}
+
+function normalizeSignals(value: unknown): WeatherSignal[] {
+  return Array.isArray(value)
+    ? value.filter((signal): signal is WeatherSignal => weatherSignals.has(signal as WeatherSignal))
+    : [];
 }
 
 async function sqliteCallback(

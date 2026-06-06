@@ -1,19 +1,15 @@
-import { useSelectedLocation, useStore } from '../state/store';
+import { coordinatesText } from '../locationDisplay';
+import { useSelectedLocation } from '../state/store';
 import { DataTrustStrip } from './DataTrustStrip';
 import { formatTemperature, formatTime } from './format';
 import { HourlyStrip } from './HourlyStrip';
-import { RefreshIcon } from './icons';
 import { MapCard } from './MapCard';
 import { RiskBrief } from './RiskBrief';
 import { TenDayForecast } from './TenDayForecast';
 import { TileGrid } from './Tiles';
-
-function coordinatesText(location: { latitude: number; longitude: number }): string {
-  return `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
-}
+import { TrendPanel } from './TrendPanel';
 
 export function Hero() {
-  const { refresh, refreshingId } = useStore();
   const selected = useSelectedLocation();
 
   if (!selected) {
@@ -40,7 +36,6 @@ export function Hero() {
   const observed = formatTime(selected.weather?.observed_at);
   const validPeriod = selected.weather?.valid_period_text;
   const source = selected.weather?.source;
-  const isRefreshing = refreshingId === selected.id;
   const temperature = formatTemperature(selected.weather?.temperature_c);
   const high = formatTemperature(selected.weather?.forecast_high_c);
   const low = formatTemperature(selected.weather?.forecast_low_c);
@@ -66,22 +61,14 @@ export function Hero() {
         )}
 
         <RiskBrief area={area} weather={selected.weather} />
-        <DataTrustStrip weather={selected.weather} />
+        <DataTrustStrip locationId={selected.id} weather={selected.weather} />
+        <TrendPanel locationId={selected.id} />
         <HourlyStrip periods={selected.weather?.forecast_periods} />
         <TenDayForecast weather={selected.weather} />
         <MapCard />
         <TileGrid weather={selected.weather} />
 
         <footer className="mt-2 flex flex-col items-center gap-3 pb-8 text-xs text-white/55">
-          <button
-            type="button"
-            onClick={() => void refresh(selected.id)}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <RefreshIcon className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isRefreshing ? 'Refreshing…' : 'Refresh'}</span>
-          </button>
           <p>
             Weather for {area}
             {secondaryArea ? ` · ${secondaryArea}` : ''}

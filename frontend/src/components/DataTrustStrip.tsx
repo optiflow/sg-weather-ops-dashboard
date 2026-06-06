@@ -1,8 +1,11 @@
+import { useStore } from '../state/store';
 import type { WeatherDataQuality, WeatherSignal, WeatherSnapshot } from '../types';
 import { signalLabel } from '../weatherRisk';
 import { formatTime } from './format';
+import { RefreshIcon } from './icons';
 
 interface DataTrustStripProps {
+  locationId: number;
   weather: WeatherSnapshot;
 }
 
@@ -22,13 +25,22 @@ const statusClasses: Record<WeatherDataQuality['status'], string> = {
   unavailable: 'border-red-200/35 bg-red-400/20 text-red-50',
 };
 
-export function DataTrustStrip({ weather }: DataTrustStripProps) {
+export function DataTrustStrip({ locationId, weather }: DataTrustStripProps) {
+  const { refresh, refreshingId } = useStore();
   const quality = weather.data_quality;
   const missing = quality.unavailable_signals;
   const missingText =
     missing.length === 0 ? 'No missing signals' : `Missing ${formatSignals(missing)}`;
+  const stale = quality.stale_signals;
+  const staleText =
+    quality.freshness_status === 'stale'
+      ? stale.length === 0
+        ? 'Stale provider timestamps'
+        : `Stale ${formatSignals(stale)}`
+      : null;
   const refreshed = formatTime(quality.last_refreshed_at);
   const observed = formatTime(weather.observed_at);
+  const isRefreshing = refreshingId === locationId;
 
   return (
     <section className="rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3 backdrop-blur-xl">
@@ -42,13 +54,27 @@ export function DataTrustStrip({ weather }: DataTrustStripProps) {
             {observed ? ` · Observed ${observed}` : ''}
           </p>
         </div>
-        <span
-          className={`w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClasses[quality.status]}`}
-        >
-          {statusLabels[quality.status]}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span
+            className={`w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClasses[quality.status]}`}
+          >
+            {statusLabels[quality.status]}
+          </span>
+          <button
+            type="button"
+            onClick={() => void refresh(locationId)}
+            disabled={isRefreshing}
+            aria-live="polite"
+            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-xs font-medium text-white/85 hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshIcon className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
       </div>
-      <p className="mt-2 text-xs leading-snug text-white/60">{missingText}</p>
+      <p className="mt-2 text-xs leading-snug text-white/60">
+        {staleText ? `${missingText} · ${staleText}` : missingText}
+      </p>
     </section>
   );
 }

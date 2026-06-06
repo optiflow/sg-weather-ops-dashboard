@@ -3,7 +3,7 @@ title: Weather Data Pipeline
 description: How SG Weather Ops Dashboard fetches and maps real-time Singapore weather data.
 ---
 
-SG Weather Ops Dashboard stores a weather snapshot, not a time series. A snapshot is fetched when a location is created and again when the user refreshes it. The snapshot is persisted in the `locations` row and rendered directly by the frontend.
+SG Weather Ops Dashboard uses the latest weather snapshot as the primary dashboard read model. A snapshot is fetched when a location is created and again when the user refreshes it. The latest snapshot is persisted in the `locations` row and rendered directly by the frontend; refresh attempts also append observation rows for the history endpoint.
 
 ## Data Pipeline
 
@@ -19,7 +19,8 @@ graph TD
   Client --> WindSpeed["wind-speed\nnearest station"]
   Client --> WindDirection["wind-direction\nnearest station"]
   Client --> UV["uv\nlatest national value"]
-  Client --> AirQuality["psi + pm25\nnearest region"]
+  Client --> PSI["psi\nnearest region"]
+  Client --> PM25["pm25\nnearest region"]
   Client --> DayForecast["24-hour forecast\nnearest region periods"]
   Client --> FourDay["4-day forecast\nlegacy endpoint"]
   Forecast --> Snapshot["WeatherSnapshot"]
@@ -29,10 +30,12 @@ graph TD
   WindSpeed --> Snapshot
   WindDirection --> Snapshot
   UV --> Snapshot
-  AirQuality --> Snapshot
+  PSI --> Snapshot
+  PM25 --> Snapshot
   DayForecast --> Snapshot
   FourDay --> Snapshot
-  Snapshot --> Db["updateWeather()\nSQLite weather columns"]
+  Snapshot --> Db["updateWeather()\nlatest SQLite snapshot"]
+  Snapshot --> History["weather_observations\nappend-only history"]
 ```
 
 ## API Endpoints Used
@@ -73,7 +76,7 @@ Only stations that have a value in the latest reading are considered.
 
 ## Region Matching
 
-Air-quality readings use the region metadata returned by the PSI provider. The client picks the nearest provider region and reads PSI and PM2.5 values for that region.
+Air-quality readings are fetched separately from the PSI and PM2.5 providers. The client picks the nearest provider region for each response and stores `psi_twenty_four_hourly`, `pm25_one_hourly`, and `air_quality_region` on the snapshot.
 
 The 24-hour forecast uses five fixed Singapore regions: `west`, `north`, `central`, `south`, `east`. The client picks the nearest fixed region and reads that region's period forecast.
 
@@ -88,11 +91,11 @@ The backend and frontend share the same JSON field names for `WeatherSnapshot`:
 | Regional and national readings | `uv_index`, `psi_twenty_four_hourly`, `pm25_one_hourly`, `air_quality_region` |
 | 24-hour forecast | `forecast_low_c`, `forecast_high_c`, `forecast_periods[]` |
 | 4-day forecast | `daily_forecast[]` |
-| Data trust | `data_quality.status`, `data_quality.last_refreshed_at`, `data_quality.unavailable_signals[]` |
+| Data trust | `data_quality.status`, `data_quality.last_refreshed_at`, `data_quality.unavailable_signals[]`, `data_quality.freshness_status`, `data_quality.stale_signals[]` |
 
 The database stores scalar fields as SQLite columns and stores `forecast_periods`, `daily_forecast`, and `data_quality` as JSON text columns through Drizzle's typed JSON mode.
 
-The app does not store historical readings or chart-ready time series. Those features are deferred until the Weather Risk Brief proves useful, because trend charts need append-only observation storage and query semantics that are separate from the current snapshot model.
+The latest snapshot remains on `locations` for backward-compatible `/api/locations*` responses. Refresh flows also write `refresh_attempts` and `weather_observations`, which support `GET /api/locations/:locationId/history` and the lightweight trend panel. Existing `locations` rows are not backfilled into historical observations.
 
 ## Data Quality Contract
 
@@ -105,6 +108,8 @@ interface WeatherDataQuality {
   status: RefreshStatus;
   last_refreshed_at: string | null;
   unavailable_signals: WeatherSignal[];
+  freshness_status: 'unknown' | 'not_refreshed' | 'fresh' | 'stale';
+  stale_signals: WeatherSignal[];
 }
 ```
 
@@ -119,6 +124,21 @@ The statuses mean:
 | `unavailable` | No tracked provider signal was usable in the refresh attempt. |
 
 Tracked signals are the 2-hour forecast, temperature, humidity, rainfall, wind speed, wind direction, UV, PSI, PM2.5, 24-hour forecast, and 4-day forecast.
+
+Freshness is tracked separately from coverage. A provider signal can be usable but stale when its provider timestamp is older than the client's freshness window. Stale signals appear in `data_quality.stale_signals`, and the snapshot-level `freshness_status` becomes `stale`.
+
+## Provider Caching and Coalescing
+
+`SingaporeWeatherClient` keeps an in-memory provider cache and coalesces concurrent identical provider requests. The cache is process-local and intentionally short-lived:
+
+| Provider request | Cache TTL |
+| --- | --- |
+| 2-hour forecast | 5 minutes |
+| 24-hour forecast | 5 minutes |
+| 4-day forecast | 12 hours |
+| Realtime readings, UV, PSI, PM2.5 | 1 minute |
+
+This reduces repeated data.gov.sg calls during local use and overlapping refreshes, but it is not durable storage and is cleared when the Node process exits.
 
 ## Partial Failures
 
@@ -146,6 +166,8 @@ The route behavior depends on where the failure occurs:
 | Browser-position create after saving matched area | Keeps the new canonical location with default weather and returns `201`. |
 | Manual refresh | Persists partial or `Unavailable` snapshots for settled endpoint failures. Returns `502` only when the weather client rejects outside that settled endpoint flow. |
 
+Manual refreshes are also coalesced per location while a refresh is already in flight. Recent manual refreshes may be throttled by the route layer; create-triggered refreshes still run when a location is first inserted.
+
 ## Weather Risk Brief
 
 The Weather Risk Brief is a pure frontend interpretation of the latest `WeatherSnapshot`; it does not call a new provider and does not persist a separate risk score. `frontend/src/weatherRisk.ts` derives an underlying `Low`, `Moderate`, `High`, or `Unavailable` state from:
@@ -163,9 +185,10 @@ The frontend renders snapshot fields in these components:
 
 | Component | Data used |
 | --- | --- |
-| `Hero` | Area, temperature, condition, high/low, observed time, source, refresh action. |
+| `Hero` | Area, temperature, condition, high/low, observed time, and source. |
 | `RiskBrief` | Latest snapshot metrics plus `data_quality` to derive the frontend risk level, user-facing recommendation, confidence wording, and things to watch. |
-| `DataTrustStrip` | `data_quality.status`, `last_refreshed_at`, missing signals, and observation time for technical data trust. |
+| `DataTrustStrip` | Refresh action plus `data_quality.status`, `last_refreshed_at`, missing signals, freshness status, stale signals, and observation time for technical data trust. |
+| `TrendPanel` | Recent rows from `GET /api/locations/:locationId/history`; empty until refreshes create observations. |
 | `HourlyStrip` | `forecast_periods` from the 24-hour regional forecast. |
 | `TenDayForecast` | `daily_forecast`; the current provider returns 4 days. |
 | `MapCard` | Saved coordinates and temperature/condition markers on Leaflet. |

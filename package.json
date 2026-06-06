@@ -3,11 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
   "scripts": {
     "prepare": "lefthook install",
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w frontend && tsc -p backend/tsconfig.json",
     "docs:build": "npm run build -w docs",
+    "docs:check": "node scripts/check-docs.mjs",
     "start": "node scripts/start.mjs",
     "doctor": "node scripts/doctor.mjs",
     "reset": "node scripts/reset.mjs",

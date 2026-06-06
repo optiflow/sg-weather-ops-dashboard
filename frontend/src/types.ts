@@ -13,6 +13,7 @@ export interface DailyForecast {
 }
 
 export type RefreshStatus = 'unknown' | 'not_refreshed' | 'complete' | 'partial' | 'unavailable';
+export type FreshnessStatus = 'unknown' | 'not_refreshed' | 'fresh' | 'stale';
 
 export type WeatherSignal =
   | 'two_hour_forecast'
@@ -31,6 +32,8 @@ export interface WeatherDataQuality {
   status: RefreshStatus;
   last_refreshed_at: string | null;
   unavailable_signals: WeatherSignal[];
+  freshness_status: FreshnessStatus;
+  stale_signals: WeatherSignal[];
 }
 
 export interface WeatherSnapshot {
@@ -99,6 +102,19 @@ export interface LocationFromPositionResponse {
   location: Location;
   created: boolean;
   matched_area: MatchedArea;
+}
+
+export interface WeatherObservation {
+  id: number;
+  location_id: number;
+  refresh_attempt_id: number;
+  captured_at: string;
+  observed_at: string | null;
+  weather: WeatherSnapshot;
+}
+
+export interface LocationHistoryResponse {
+  observations: WeatherObservation[];
 }
 
 export interface StoreValue {

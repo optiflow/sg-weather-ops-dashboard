@@ -34,6 +34,8 @@ const weather: WeatherSnapshot = {
     status: 'complete',
     last_refreshed_at: '2026-05-04T00:00:01Z',
     unavailable_signals: [],
+    freshness_status: 'fresh',
+    stale_signals: [],
   },
 };
 
@@ -48,6 +50,7 @@ describe('locations API', () => {
   let app: Awaited<ReturnType<typeof import('../server.js').createApp>>;
   let resetStore: () => Promise<void>;
   let deleteStoredLocation: (id: number) => Promise<void>;
+  let getLatestRefreshAttempt: typeof import('../db.js').getLatestRefreshAttempt;
   let weatherRequestHandler: (latitude: number, longitude: number) => Promise<WeatherSnapshot>;
   let forecastAreasHandler: () => Promise<TwoHourForecastArea[]>;
   let areaByNameHandler: (name: string) => Promise<TwoHourForecastArea>;
@@ -94,6 +97,7 @@ describe('locations API', () => {
     const db = await import('../db.js');
     resetStore = db.resetStore;
     deleteStoredLocation = db.deleteLocation;
+    getLatestRefreshAttempt = db.getLatestRefreshAttempt;
   });
 
   beforeEach(async () => {
@@ -633,6 +637,113 @@ describe('locations API', () => {
     expect(getResponse.body.weather.condition).toBe('Showers');
   });
 
+  it('lists append-only weather history for a location', async () => {
+    const createResponse = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85 })
+      .expect(201);
+    const refreshedWeather: WeatherSnapshot = {
+      ...weather,
+      condition: 'Showers',
+      observed_at: '2026-05-04T01:00:00Z',
+      temperature_c: 27,
+    };
+    weatherRequestHandler = async () => refreshedWeather;
+
+    await request(app).post(`/api/locations/${createResponse.body.id}/refresh`).expect(200);
+
+    const response = await request(app)
+      .get(`/api/locations/${createResponse.body.id}/history?limit=5`)
+      .expect(200);
+
+    expect(response.body.observations).toHaveLength(2);
+    expect(response.body.observations[0]).toMatchObject({
+      location_id: createResponse.body.id,
+      weather: {
+        condition: 'Showers',
+        observed_at: '2026-05-04T01:00:00Z',
+      },
+    });
+    expect(response.body.observations[1].weather.condition).toBe('Cloudy');
+
+    const missingResponse = await request(app).get('/api/locations/999/history').expect(404);
+    expect(missingResponse.body).toEqual({ detail: 'Location not found' });
+  });
+
+  it('throttles repeated manual refreshes without throttling the create refresh', async () => {
+    const createResponse = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85 })
+      .expect(201);
+    const refreshedWeather: WeatherSnapshot = {
+      ...weather,
+      condition: 'Showers',
+      observed_at: '2026-05-04T01:00:00Z',
+      temperature_c: 27,
+    };
+    weatherRequestHandler = async () => refreshedWeather;
+
+    await request(app).post(`/api/locations/${createResponse.body.id}/refresh`).expect(200);
+    weatherRequestHandler = async () => {
+      throw new WeatherProviderError('unexpected second manual refresh');
+    };
+
+    const response = await request(app)
+      .post(`/api/locations/${createResponse.body.id}/refresh`)
+      .expect(200);
+
+    expect(response.body.weather.condition).toBe('Showers');
+    expect(weatherRequests).toEqual([
+      { latitude: 1.35, longitude: 103.85 },
+      { latitude: 1.35, longitude: 103.85 },
+    ]);
+    await expect(getLatestRefreshAttempt(createResponse.body.id)).resolves.toMatchObject({
+      outcome: 'throttled',
+      trigger: 'manual',
+    });
+  });
+
+  it('coalesces concurrent manual refreshes for the same location', async () => {
+    const createResponse = await request(app)
+      .post('/api/locations')
+      .send({ latitude: 1.35, longitude: 103.85 })
+      .expect(201);
+    const refreshedWeather: WeatherSnapshot = {
+      ...weather,
+      condition: 'Showers',
+      observed_at: '2026-05-04T01:00:00Z',
+      temperature_c: 27,
+    };
+    let releaseRefresh: ((snapshot: WeatherSnapshot) => void) | undefined;
+    const refreshStarted = new Promise<void>((resolveStarted) => {
+      weatherRequestHandler = async () =>
+        new Promise<WeatherSnapshot>((resolveRefresh) => {
+          releaseRefresh = resolveRefresh;
+          resolveStarted();
+        });
+    });
+
+    const responses = Promise.all([
+      request(app).post(`/api/locations/${createResponse.body.id}/refresh`).expect(200),
+      request(app).post(`/api/locations/${createResponse.body.id}/refresh`).expect(200),
+    ]);
+    await refreshStarted;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseRefresh?.(refreshedWeather);
+    const [firstResponse, secondResponse] = await responses;
+
+    expect(firstResponse.body.weather.condition).toBe('Showers');
+    expect(secondResponse.body.weather.condition).toBe('Showers');
+    expect(weatherRequests).toEqual([
+      { latitude: 1.35, longitude: 103.85 },
+      { latitude: 1.35, longitude: 103.85 },
+    ]);
+    await expect(getLatestRefreshAttempt(createResponse.body.id)).resolves.toMatchObject({
+      outcome: 'coalesced',
+      trigger: 'manual',
+    });
+  });
+
   it('returns bad gateway when the weather provider fails during refresh', async () => {
     const createResponse = await request(app)
       .post('/api/locations')
@@ -648,6 +759,11 @@ describe('locations API', () => {
 
     expect(response.body).toEqual({
       detail: 'Weather provider rate limit reached (HTTP 429)',
+    });
+    await expect(getLatestRefreshAttempt(createResponse.body.id)).resolves.toMatchObject({
+      outcome: 'failed',
+      trigger: 'manual',
+      error_type: 'weather_provider',
     });
   });
 

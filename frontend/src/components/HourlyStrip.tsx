@@ -1,5 +1,5 @@
 import type { ForecastPeriod } from '../types';
-import { CloudIcon, SunIcon } from './icons';
+import { WeatherConditionIcon } from '../weatherIcon';
 
 interface HourlyStripProps {
   periods?: ForecastPeriod[];
@@ -41,23 +41,13 @@ export function HourlyStrip({ periods = [] }: HourlyStripProps) {
           className="grid min-w-[32rem] divide-x divide-white/5 sm:min-w-0"
           style={{ gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))` }}
         >
-          {slots.map((slot) => {
-            const isFair = slot.forecast?.toLowerCase().includes('fair');
-            return (
-              <div
-                key={slot.key}
-                className="flex flex-col items-center gap-2 px-2 py-4 text-center"
-              >
-                <div className="text-xs font-medium text-white/85">{slot.label}</div>
-                {isFair ? (
-                  <SunIcon className="h-7 w-7 text-amber-300" />
-                ) : (
-                  <CloudIcon className="h-7 w-7 text-white/85" />
-                )}
-                <div className="text-xs leading-snug text-white/90">{slot.forecast}</div>
-              </div>
-            );
-          })}
+          {slots.map((slot) => (
+            <div key={slot.key} className="flex flex-col items-center gap-2 px-2 py-4 text-center">
+              <div className="text-xs font-medium text-white/85">{slot.label}</div>
+              <WeatherConditionIcon condition={slot.forecast} className="h-7 w-7 text-white/85" />
+              <div className="text-xs leading-snug text-white/90">{slot.forecast}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

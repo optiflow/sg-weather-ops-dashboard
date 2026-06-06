@@ -24,7 +24,7 @@ The `sg-weather-ops-dashboard` project is a monorepo managed via npm workspaces.
 ```mermaid
 flowchart LR
   Browser["Browser\nReact dashboard"] --> Express["Express server\nAPI + Vite middleware"]
-  Express --> Routes["locations routes"]
+  Express --> Routes["locations and readiness routes"]
   Routes --> Weather["SingaporeWeatherClient"]
   Routes --> Db["SQLite via Drizzle"]
   Weather --> Gov["data.gov.sg weather APIs"]
@@ -44,15 +44,16 @@ Each saved location stores:
 - Optional `label` copy for the user's own name for the place.
 - `is_favorite`, which the frontend uses to keep favorites first while sorting by recent activity or name.
 - One latest weather snapshot.
+- Append-only refresh attempts and weather observations created by successful or failed refresh flows.
 
 The backend exposes canonical forecast areas through `GET /api/forecast-areas`, creates or selects named areas through `POST /api/locations/from-area`, and updates label/favorite metadata through `PATCH /api/locations/:locationId`.
 
-## Snapshot Model
+## Snapshot And History Model
 
-The app stores one latest weather snapshot on each `locations` row. A location is inserted with default `not_refreshed` weather, then create and refresh flows attempt to replace that default snapshot with provider data.
+The app stores one latest weather snapshot on each `locations` row. A location is inserted with default `not_refreshed` weather, then create and refresh flows attempt to replace that default snapshot with provider data. The latest snapshot remains the primary dashboard read model.
 
-`WeatherSnapshot` includes `data_quality`, which records the refresh status, refresh time, and unavailable provider signals. Legacy rows and migration defaults use `unknown`; new default rows use `not_refreshed`; provider refreshes classify the result as `complete`, `partial`, or `unavailable`.
+`WeatherSnapshot` includes `data_quality`, which records the refresh coverage status, refresh time, unavailable provider signals, freshness status, and stale provider signals. Legacy rows and migration defaults use `unknown`; new default rows use `not_refreshed`; provider refreshes classify coverage as `complete`, `partial`, or `unavailable`, and freshness as `fresh` or `stale`.
 
-The frontend treats the persisted snapshot as the source of truth. `DataTrustStrip` renders `data_quality` directly, while `RiskBrief` derives a lightweight decision-support summary from the same snapshot fields plus stale/missing-signal checks. There is no separate risk table, alert provider, or historical time-series model.
+The frontend treats the persisted snapshot as the source of truth for the main dashboard. `DataTrustStrip` renders `data_quality` directly and owns the refresh control, while `RiskBrief` derives a lightweight decision-support summary from the same snapshot fields plus stale/missing-signal checks. There is no separate risk table, alert provider, auth model, or cloud sync.
 
-Historical readings and trend charts are deferred until the Risk Brief proves useful, because they require a different persistence model from the current single-row snapshot design.
+Refresh flows also write `refresh_attempts` and `weather_observations`. `GET /api/locations/:locationId/history` exposes recent observations for a minimal trend view, without changing the existing `/api/locations*` response shape.

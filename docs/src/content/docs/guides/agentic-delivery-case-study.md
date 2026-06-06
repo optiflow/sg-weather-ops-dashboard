@@ -13,7 +13,7 @@ The delivery goal was to turn a Singapore weather-dashboard idea into a working,
 
 - Save Singapore locations.
 - Refresh current weather from data.gov.sg.
-- Persist one latest weather snapshot per location.
+- Persist one latest weather snapshot per location plus append-only refreshed observations.
 - Add browser geolocation without storing raw browser coordinates.
 - Keep the implementation understandable to humans and coding agents.
 
@@ -57,7 +57,7 @@ This is the product-management value of the case study: the AI tools accelerate 
 | [Agent operating contract](https://github.com/optiflow/sg-weather-ops-dashboard/blob/main/AGENTS.md) | Agent-facing rules for assumptions, scope control, verification, docs, and safety. |
 | [Repo skills](https://github.com/optiflow/sg-weather-ops-dashboard/tree/main/.agents/skills) | Repeatable workflows for weather features, database migrations, visual QA, and final quality gates. |
 | [API Endpoints](/sg-weather-ops-dashboard/reference/api-endpoints/) | Backend request/response contracts and error behavior. |
-| [Database Schema](/sg-weather-ops-dashboard/reference/database-schema/) | SQLite and Drizzle persistence model for saved locations and weather snapshots. |
+| [Database Schema](/sg-weather-ops-dashboard/reference/database-schema/) | SQLite and Drizzle persistence model for saved locations, latest snapshots, refresh attempts, and observations. |
 | [Frontend Components](/sg-weather-ops-dashboard/reference/frontend-components/) | React state, component tree, map surface, and location workflows. |
 | [Weather Data Pipeline](/sg-weather-ops-dashboard/guides/weather-data/) | data.gov.sg endpoints, weather normalization, partial-failure handling, and rendering flow. |
 | [Getting Started](/sg-weather-ops-dashboard/guides/getting-started/) | Local setup, dev server, geolocation notes, and quality-gate commands. |
