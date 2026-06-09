@@ -124,7 +124,7 @@ export function AddLocationForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="grid gap-3 rounded-2xl border border-white/15 bg-white/[0.1] p-3 backdrop-blur-xl"
+      className="grid max-h-[15rem] gap-2 overflow-y-auto overscroll-contain rounded-2xl border border-white/15 bg-white/[0.1] p-2.5 backdrop-blur-xl sm:max-h-none sm:gap-3 sm:overflow-visible sm:p-3"
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
         New location

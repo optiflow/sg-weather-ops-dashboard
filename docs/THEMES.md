@@ -1,15 +1,13 @@
 # SG Weather Ops Dashboard Themes
 
-SG Weather Ops Dashboard ships with five dashboard themes. The theme selector in `frontend/src/components/ThemeSelector.tsx` exposes the same five values defined by `Theme` in `frontend/src/state/themeStore.tsx`.
+SG Weather Ops Dashboard ships with three dashboard themes. The theme selector in `frontend/src/components/ThemeSelector.tsx` exposes the same three values defined by `Theme` in `frontend/src/state/themeStore.tsx`.
 
 ## Implemented Themes
 
 | Theme | Value | Body class | Purpose |
 | --- | --- | --- | --- |
 | Apple | `apple` | `theme-apple` | Clean glass-style default with large weather data and soft contrast. |
-| Cotton Candy | `cotton-candy` | `theme-cotton-candy` | Light pastel theme with a softer, playful feel. |
 | Night City | `night-city` | `theme-night-city` | Dark theme with bright city-like accents. |
-| Pixel | `pixel` | `theme-pixel` | Retro theme with sharper colors and block-like styling. |
 | Terminal | `terminal` | `theme-terminal` | High-contrast terminal style for dense reading. |
 
 ## Source Files

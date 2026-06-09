@@ -114,7 +114,7 @@ interface ApiMockOptions {
   history?: (id: number) => WeatherObservation[];
 }
 
-const THEMES = ['apple', 'cotton-candy', 'night-city', 'pixel', 'terminal'] as const;
+const THEMES = ['apple', 'night-city', 'terminal'] as const;
 
 test('loads the dashboard shell', async ({ page }) => {
   await mockLocationApi(page, []);
@@ -124,6 +124,11 @@ test('loads the dashboard shell', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Use my location' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add Location' })).toBeVisible();
   await expect(page.getByLabel('Theme')).toBeVisible();
+  await expect(page.getByLabel('Theme').locator('option')).toHaveText([
+    'Apple',
+    'Night City',
+    'Terminal',
+  ]);
 });
 
 test('keeps the dashboard shell usable on mobile', async ({ page }) => {
@@ -136,7 +141,7 @@ test('keeps the dashboard shell usable on mobile', async ({ page }) => {
   await expect(page.getByLabel('Search saved locations')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Use my location' })).toBeVisible();
   await expect(page.getByRole('main').getByRole('heading', { name: 'Bishan' })).toBeVisible();
-  await page.getByLabel('Theme').selectOption('cotton-candy');
+  await page.getByLabel('Theme').selectOption('terminal');
 
   const sidebarBox = await sidebar.boundingBox();
   const searchBox = await page.getByLabel('Search saved locations').boundingBox();
@@ -168,6 +173,26 @@ test('collapses saved locations on mobile after selecting a location', async ({ 
   await expect(page.getByRole('main').getByRole('heading', { name: 'Changi' })).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.getByRole('button', { name: /Select Bishan/ })).toHaveCount(0);
+});
+
+test('keeps saved locations reachable when the mobile add form is open', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockLocationApi(page, [location(1, 'Bishan'), location(2, 'Changi')]);
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Add Location' }).click();
+
+  await expect(page.getByText('New location')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Select Bishan/ })).toBeVisible();
+
+  const sidebarBox = await page.locator('aside').boundingBox();
+  const savedCardBox = await page.getByRole('button', { name: /Select Bishan/ }).boundingBox();
+  expect(savedCardBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(
+    (sidebarBox?.y ?? 0) + (sidebarBox?.height ?? 0),
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBe(true);
 });
 
 test('creates a forecast-area location with an optional label from the picker', async ({
@@ -282,6 +307,21 @@ test('does not overflow horizontally across all themes on mobile', async ({ page
     await page.getByLabel('Theme').selectOption(theme);
     await expect(page.locator('body')).toHaveClass(new RegExp(`theme-${theme}`));
     await expectNoHorizontalOverflow(page);
+  }
+});
+
+test('falls back to Apple when localStorage has a retired theme', async ({ page }) => {
+  await mockLocationApi(page, []);
+  await page.goto('/');
+
+  for (const retiredTheme of ['cotton-candy', 'pixel']) {
+    await page.evaluate((theme) => {
+      localStorage.setItem('sg_weather_ops_dashboard_theme', theme);
+    }, retiredTheme);
+    await page.reload();
+
+    await expect(page.locator('body')).toHaveClass(/theme-apple/);
+    await expect(page.getByLabel('Theme')).toHaveValue('apple');
   }
 });
 

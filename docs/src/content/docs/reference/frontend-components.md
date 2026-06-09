@@ -70,7 +70,7 @@ Holds all application state for locations and exposes actions through a `StoreVa
 
 Manages the active visual theme. The selected theme is persisted in `localStorage` under the key `sg_weather_ops_dashboard_theme`.
 
-Available themes: `apple`, `cotton-candy`, `night-city`, `pixel`, `terminal`.
+Available themes: `apple`, `night-city`, `terminal`.
 
 The provider applies a `theme-{name}` CSS class to `document.body` on change.
 
@@ -196,9 +196,7 @@ Most layout styling is in Tailwind utility classes. `frontend/src/index.css` def
 | Theme | Body class |
 | --- | --- |
 | Apple | `theme-apple` |
-| Cotton Candy | `theme-cotton-candy` |
 | Night City | `theme-night-city` |
-| Pixel | `theme-pixel` |
 | Terminal | `theme-terminal` |
 
 The theme selector writes the selected value to `localStorage` under `sg_weather_ops_dashboard_theme`.

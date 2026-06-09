@@ -1,12 +1,10 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
-export type Theme = 'apple' | 'cotton-candy' | 'night-city' | 'pixel' | 'terminal';
+export type Theme = 'apple' | 'night-city' | 'terminal';
 
 export const THEMES = [
   { value: 'apple', label: 'Apple' },
-  { value: 'cotton-candy', label: 'Cotton Candy' },
   { value: 'night-city', label: 'Night City' },
-  { value: 'pixel', label: 'Pixel' },
   { value: 'terminal', label: 'Terminal' },
 ] as const satisfies ReadonlyArray<{ value: Theme; label: string }>;
 
